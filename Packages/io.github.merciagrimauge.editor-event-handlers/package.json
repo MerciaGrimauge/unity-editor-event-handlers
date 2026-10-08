@@ -1,0 +1,16 @@
+{
+  "name": "io.github.merciagrimauge.editor-event-handlers",
+  "version": "0.3.0",
+  "displayName": "Editor Event Handlers",
+  "description": "Typed editor change conditions and cooperative transactional subscriptions.",
+  "unity": "2022.3",
+  "author": {
+    "email": "218344561+MerciaGrimauge@users.noreply.github.com",
+    "url": "https://github.com/MerciaGrimauge",
+    "name": "マーシア・グリマージ"
+  },
+  "license": "MIT",
+  "url": "https://github.com/MerciaGrimauge/unity-editor-event-handlers/releases/download/v0.5.0/io.github.merciagrimauge.editor-event-handlers-0.3.0.zip",
+  "documentationUrl": "https://github.com/MerciaGrimauge/unity-editor-event-handlers/tree/main/Packages/io.github.merciagrimauge.editor-event-handlers",
+  "vpmDependencies": {}
+}

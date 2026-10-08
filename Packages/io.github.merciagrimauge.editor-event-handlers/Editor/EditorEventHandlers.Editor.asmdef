@@ -1,0 +1,11 @@
+{
+  "name": "EditorEventHandlers.Editor",
+  "rootNamespace": "EditorEventHandlers.Editor",
+  "references": [],
+  "includePlatforms": ["Editor"],
+  "overrideReferences": true,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "allowUnsafeCode": false,
+  "noEngineReferences": false
+}

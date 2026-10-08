@@ -1,0 +1,15 @@
+{
+  "name": "AvatarPlacement.Editor",
+  "rootNamespace": "AvatarPlacement.Editor",
+  "references": [
+    "EditorEventHandlers.Editor"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "overrideReferences": true,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "allowUnsafeCode": false,
+  "noEngineReferences": false
+}

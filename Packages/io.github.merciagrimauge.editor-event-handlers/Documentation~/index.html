@@ -1,0 +1,1369 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>Editor Event Handlers API</title><style>*{box-sizing:border-box}body{margin:0;font:15px/1.65 system-ui,sans-serif;color:#24334a;background:#fafbfd}header{position:sticky;top:0;z-index:2;background:#162c45;color:white;padding:12px 24px;display:flex;justify-content:space-between;align-items:center}header small{color:#c2d3e7}.layout{display:grid;grid-template-columns:290px minmax(0,1fr);max-width:1500px;margin:auto}aside{position:sticky;top:58px;height:calc(100vh - 58px);padding:22px 18px;overflow:auto;border-right:1px solid #d7e0eb;background:#f0f4f8}input{width:100%;padding:10px;border:1px solid #869db7;border-radius:5px;font:inherit}nav h2{font-size:12px;letter-spacing:.05em;color:#4a6078;margin:22px 8px 5px}nav a{display:block;padding:5px 8px;color:#304d70;text-decoration:none;border-radius:4px;overflow-wrap:anywhere}nav a:hover,nav a[aria-current="page"]{background:#d9e8f6;color:#102d50}nav .member{font-size:12px;padding-left:20px}main{padding:28px 44px;min-width:0}article{max-width:990px}h1{font-size:30px;font-weight:650;margin:0 0 16px;color:#123557}h2{font-size:21px;margin-top:34px;padding-bottom:8px;border-bottom:1px solid #d7e0eb}h3{font-size:16px;color:#365574}a{color:#185aaa}code{font:13px/1.6 Consolas,monospace;overflow-wrap:anywhere}p code,td code{background:#edf1f6;padding:2px 4px;border-radius:3px}pre{background:#152b43;color:#e6f0fa;padding:18px;border-radius:6px;overflow:auto}pre code{white-space:pre}table{border-collapse:collapse;width:100%;font-size:14px}td,th{padding:10px 12px;text-align:left;border-bottom:1px solid #dce4ed;vertical-align:top}th{background:#eaf0f6}td:first-child{min-width:100px}.table-scroll{overflow:auto}a[id]{display:block;scroll-margin-top:90px}[hidden]{display:none!important}.hint{font-size:12px;color:#4a6078}@media(max-width:780px){.layout{grid-template-columns:1fr}aside{position:static;height:auto;max-height:280px}main{padding:22px 18px}header{padding:12px 18px}header small{display:none}}@media print{header,aside{display:none}.layout{display:block}main{padding:0}article[hidden]{display:none!important}}h1 code,h2 code{font:inherit}</style></head><body><header><strong>Editor Event Handlers · API reference</strong><small>Unity Editor / C#</small></header><div class="layout"><aside><label for="search">APIを検索</label><input id="search" type="search" placeholder="例: Subscribe / Modify" autocomplete="off"><p id="search-status" class="hint" aria-live="polite"></p><nav id="navigation" aria-label="API navigation"></nav></aside><main><article id="API_REFERENCE" hidden><h1>API reference</h1>
+<p>Unity Editorで条件を登録し、型付き通知を購読するためのAPIです。型名からメンバー、引数、戻り値、例外を参照できます。すべてEditor専用です。</p>
+<ul><li>初めて使う場合: <a href="#QUICKSTART">クイックスタート</a></li><li>ハンドラーを実装する場合: <a href="#HANDLER_AUTHORING">イベントハンドラーガイド</a></li><li>独自条件を提供する場合: <a href="#CONDITION_AUTHORING">条件プロバイダーガイド</a></li><li>配送・期限・設定保存・復元の仕様: <a href="#CONTRACTS">実行契約とライフサイクル</a></li><li>ブラウザーで検索する場合: 同じフォルダーの<a href="index.html">APIブラウザー</a>をダウンロードして開きます。外部への接続は不要です。</li></ul>
+<h2>役割</h2>
+<div class="table-scroll"><table><thead><tr><th>役割</th><th>英語名</th><th>API・実装</th></tr></thead><tbody><tr><td>条件プロバイダー</td><td>Condition Provider</td><td><code>IEventCondition&lt;TEvent&gt;</code>を実装し、入力を判定して通知と編集範囲を返す</td></tr><tr><td>イベントディスパッチャー</td><td>Event Dispatcher</td><td>登録・判定結果の共有・配送・実行ポリシーを管理。公開入口は<code>EditorEvents</code>、内部実装は<code>EventDispatcher</code></td></tr><tr><td>イベントハンドラー</td><td>Event Handler</td><td><code>IEventHandler&lt;TEvent&gt;</code>を実装し、通知を購読して処理結果を返す</td></tr></tbody></table></div>
+<p>通知型と購読トークンは別の概念です。通知型は配送先を、トークンは登録の状態と解除を表します。ディスパッチャーは公開の継承・差し替え対象ではありません。</p>
+<h2>名前空間・アセンブリ</h2>
+<div class="table-scroll"><table><thead><tr><th>名前空間 / asmdef参照名</th><th>パッケージ</th></tr></thead><tbody><tr><td><code>EditorEventHandlers.Editor</code></td><td><code>io.github.merciagrimauge.editor-event-handlers</code></td></tr><tr><td><code>AvatarPlacement.Editor</code></td><td><code>io.github.merciagrimauge.avatar-placement</code></td></tr></tbody></table></div>
+<p>登録・解除・判定・実行・Unity参照の解決はEditorメインスレッドで行います。期限と有効状態の変更は管理ウィンドウの操作です。登録APIのオプションには含めません。</p>
+<h2>登録と購読</h2>
+<div class="table-scroll"><table><thead><tr><th>型</th><th>概要</th></tr></thead><tbody><tr><td><a href="#EditorEvents">EditorEvents</a></td><td>条件登録・単一購読・AND/OR購読の入口</td></tr><tr><td><a href="#SubscriptionMode">SubscriptionMode</a></td><td>単一・全条件一致・いずれか一致の購読モード</td></tr><tr><td><a href="#CompositeEvent">CompositeEvent</a></td><td>AND/ORで選択した条件の通知を型ごとに取得</td></tr><tr><td><a href="#EventSubscription">EventSubscription</a></td><td>購読の状態・直近結果・解除トークン</td></tr><tr><td><a href="#ConditionRegistration">ConditionRegistration</a></td><td>条件登録の状態・解除トークン</td></tr></tbody></table></div>
+<h2>条件プロバイダー</h2>
+<div class="table-scroll"><table><thead><tr><th>型</th><th>概要</th></tr></thead><tbody><tr><td><a href="#IEventCondition-1">&lt;TEvent&gt;</a></td><td>入力を読み取り、通知と編集範囲を返す条件のインターフェース</td></tr><tr><td><a href="#ConditionContext">ConditionContext</a></td><td>判定中の入力・バッチ番号・期限</td></tr><tr><td><a href="#ConditionMatch-1">&lt;TEvent&gt;</a></td><td>一致した通知値と編集範囲のルート</td></tr><tr><td><a href="#ConditionDeadlineExceededException">ConditionDeadlineExceededException</a></td><td>条件の協調的な期限超過</td></tr></tbody></table></div>
+<h2>イベントハンドラー</h2>
+<div class="table-scroll"><table><thead><tr><th>型</th><th>概要</th></tr></thead><tbody><tr><td><a href="#IEventHandler-1">&lt;TEvent&gt;</a></td><td>通知を処理して終了状態を返すハンドラーのインターフェース</td></tr><tr><td><a href="#HandlerContext-1">&lt;TEvent&gt;</a></td><td>型付き通知と、基底型から継承する編集API</td></tr><tr><td><a href="#HandlerContext">HandlerContext</a></td><td>期限の確認・編集範囲・Undo対応の編集API</td></tr><tr><td><a href="#HandlerResult">HandlerResult</a></td><td>成功・スキップ・失敗・キャンセルの終了結果</td></tr><tr><td><a href="#HandlerStatus">HandlerStatus</a></td><td>ハンドラーの終了状態</td></tr><tr><td><a href="#HandlerDeadlineExceededException">HandlerDeadlineExceededException</a></td><td>ハンドラーの協調的な期限超過</td></tr></tbody></table></div>
+<h2>Unity変更と識別子</h2>
+<div class="table-scroll"><table><thead><tr><th>型</th><th>概要</th></tr></thead><tbody><tr><td><a href="#EditorChange">EditorChange</a></td><td>Unity変更の種類・識別子・現在の対象参照</td></tr><tr><td><a href="#EditorChangeKind">EditorChangeKind</a></td><td>条件が必要とするUnity通知種類のフラグ</td></tr><tr><td><a href="#EditorObjectId">EditorObjectId</a></td><td>Unityのバージョン差を吸収する一時的なオブジェクト識別子</td></tr><tr><td><a href="#EditorSceneId">EditorSceneId</a></td><td>Unityのバージョン差を吸収する一時的なシーン識別子</td></tr></tbody></table></div>
+<h2>標準アバター通知</h2>
+<div class="table-scroll"><table><thead><tr><th>型</th><th>概要</th></tr></thead><tbody><tr><td><a href="#avatar-AvatarPlaced">AvatarPlaced</a></td><td>Descriptorを持つアバターPrefabの新規配置通知</td></tr><tr><td><a href="#avatar-AvatarChildBreastBlendShapesPlaced">AvatarChildBreastBlendShapesPlaced</a></td><td>アバター直下の対象から検出した胸シェイプ名の通知</td></tr><tr><td><a href="#avatar-BreastBlendShape">BreastBlendShape</a></td><td>Renderer・Mesh・インデックス・名前の検出結果</td></tr></tbody></table></div></article>
+<article id="QUICKSTART" hidden><h1>クイックスタート</h1>
+<p>アバターPrefabが配置されたとき、子オブジェクトを1つ追加するイベントハンドラーを作ります。標準条件の判定コードを書く必要はありません。</p>
+<h2>アセンブリを用意する</h2>
+<p>共通パッケージとAvatar Placement、対応するVRChat SDKを導入します。Editor専用のasmdefに次の参照を設定します。パッケージの取得・導入は利用者側で行います。</p>
+<pre><code>{
+  &quot;name&quot;: &quot;Example.AvatarFeature.Editor&quot;,
+  &quot;references&quot;: [&quot;EditorEventHandlers.Editor&quot;, &quot;AvatarPlacement.Editor&quot;],
+  &quot;includePlatforms&quot;: [&quot;Editor&quot;],
+  &quot;autoReferenced&quot;: true
+}</code></pre>
+<h2>ハンドラーを登録する</h2>
+<p>次のコードを同じアセンブリに置きます。<code>Subscribe&lt;AvatarPlaced&gt;</code>が通知を購読し、<code>Execute</code>が変更を行い、<code>HandlerResult</code>が終了状態を伝えます。通知型が定義されていれば条件の登録前でも購読できます。</p>
+<pre><code>using AvatarPlacement.Editor;
+using EditorEventHandlers.Editor;
+using UnityEditor;
+
+namespace Example.AvatarFeature.Editor
+{
+    [InitializeOnLoad]
+    internal static class AvatarAdornmentRegistration
+    {
+        private static readonly EventSubscription Subscription;
+
+        static AvatarAdornmentRegistration()
+        {
+            Subscription = EditorEvents.Subscribe&lt;AvatarPlaced&gt;(
+                new Handler());
+        }
+
+        private sealed class Handler : IEventHandler&lt;AvatarPlaced&gt;
+        {
+            public string Id =&gt; &quot;example.avatar-feature.adornment&quot;;
+
+            public HandlerResult Execute(HandlerContext&lt;AvatarPlaced&gt; context)
+            {
+                context.CheckDeadline();
+                if (context.Event.Avatar == null || context.Event.Avatar != context.Root)
+                    return HandlerResult.Skip(&quot;Avatar is no longer available.&quot;);
+                if (context.Root.transform.Find(&quot;ExampleAdornment&quot;) != null)
+                    return HandlerResult.Skip(&quot;Already configured.&quot;);
+                context.CreateChild(&quot;ExampleAdornment&quot;);
+                return HandlerResult.Success();
+            }
+        }
+    }
+}</code></pre>
+<h2>配置して確認する</h2>
+<p>通常のシーンへDescriptorを持つアバターPrefabを新しく配置すると、指定した子が追加されます。既に同名の子がある場合は処理をスキップします。既存シーンの一括探索やSceneLoaded通知はありません。</p>
+<p>管理ウィンドウ<code>Tools / MerciaGrimauge / Editor Event Handlers</code>で、登録状態・条件・有効/無効・期限を確認できます。条件が未登録または無効なら購読は待機します。失敗による無効化は再起動後も残り、UIから再有効化します。</p>
+<p>編集には<code>context</code>のメソッドを使います。追跡済み変更は失敗時に復元の対象になります。直接変更したUnity参照や外部ファイルはその対象に含まれません。各呼び出しの期限は既定100 ms、UI設定範囲は1〜100 msです。</p>
+<h2>次に読む資料</h2>
+<ul><li><a href="#EditorEvents">EditorEvents</a>: 登録・単一購読・AND/OR購読</li><li><a href="#IEventHandler-1">IEventHandler&lt;TEvent&gt;</a>: ハンドラーのインターフェース</li><li><a href="#HandlerContext-1">HandlerContext&lt;TEvent&gt;</a>: 通知と編集API</li><li><a href="#HANDLER_AUTHORING">イベントハンドラーガイド</a>: 通知の選び方、第三者の通知契約、実装例</li><li><a href="#CONDITION_AUTHORING">条件プロバイダーガイド</a>: 独自条件の追加</li><li><a href="#CONTRACTS">実行契約とライフサイクル</a>: 配送順・期限・永続設定・復元</li></ul></article>
+<article id="HANDLER_AUTHORING" hidden><h1>イベントハンドラーの作成ガイド</h1>
+<p>この資料は、条件プロバイダーの内部実装やイベントディスパッチャーのソースを読まずにイベントハンドラーを作るための入口です。イベントハンドラーは通知型を購読し、その通知を受けたときだけ同期処理します。条件プロバイダーは標準パッケージ・第三者パッケージ・自分のパッケージのいずれが提供しても同じ契約で接続できます。</p>
+<h2>使用する条件を選ぶ</h2>
+<div class="table-scroll"><table><thead><tr><th>必要な入力</th><th>使用する通知型 / 購読</th><th>編集範囲</th></tr></thead><tbody><tr><td>アバターPrefabが新しく配置された</td><td><code>AvatarPlacement.Editor.AvatarPlaced</code> / <code>Subscribe&lt;T&gt;</code></td><td><code>context.Root == notification.Avatar</code></td></tr><tr><td>アバター直下に配置された別対象に、名前にbreastを含むシェイプがある</td><td><code>AvatarPlacement.Editor.AvatarChildBreastBlendShapesPlaced</code> / <code>Subscribe&lt;T&gt;</code></td><td>親アバター。配置対象そのものではない</td></tr><tr><td>同じ入力が複数の条件プロバイダーにすべて一致した</td><td><code>SubscribeAll</code> / <code>IEventHandler&lt;CompositeEvent&gt;</code></td><td>すべての条件プロバイダーのRootが同じ場合のみ実行</td></tr><tr><td>同じ入力が複数の条件プロバイダーのいずれかに一致した</td><td><code>SubscribeAny</code> / <code>IEventHandler&lt;CompositeEvent&gt;</code></td><td>型一覧で最初に一致した条件プロバイダーのRoot</td></tr><tr><td>上記にない意味条件</td><td>第三者の条件プロバイダーまたは独自の条件プロバイダーの通知型</td><td>条件プロバイダーの公開契約で確認</td></tr></tbody></table></div>
+<p>標準条件プロバイダーはAvatar Placementパッケージが自動登録します。イベントハンドラーから同じ条件プロバイダーを登録し直しません。<a href="#avatar-API_REFERENCE">標準通知の全プロパティと検出範囲</a>を参照してください。VRChat SDKのDescriptor型がない場合は標準条件プロバイダーが登録されません。</p>
+<p><code>AvatarPlaced AND AvatarChildBreastBlendShapesPlaced</code>は「配置したアバター自身に胸シェイプがある」という条件にはなりません。前者はアバター自身の作成、後者は別対象の直下配置なので、同じ入力で一致する意味条件ではありません。その用途には「作成対象自身の胸シェイプ」を調べる別の条件プロバイダーが必要です。</p>
+<p>第三者の条件プロバイダーを購読するために必要なのは、公開通知型とそのアセンブリ、入力の意味、payloadの仕様、Rootの契約、登録方法です。条件プロバイダーのprivate/internalなクラスを参照しません。必要な情報が欠けていれば条件プロバイダーの作者へ契約の提供を求めます。型名・GameObject名・シェイプ名から意味を推測して埋めません。</p>
+<h2>Editor用アセンブリを用意する</h2>
+<p>標準条件プロバイダーを購読するイベントハンドラーのasmdef例です。サンプルは配布パッケージへ自動で取り込まれる実装ではありません。利用する機能として必要なものだけを、自分のEditor専用アセンブリへ追加してください。</p>
+<pre><code>{
+  &quot;name&quot;: &quot;Example.AvatarFeature.Editor&quot;,
+  &quot;references&quot;: [&quot;EditorEventHandlers.Editor&quot;, &quot;AvatarPlacement.Editor&quot;],
+  &quot;includePlatforms&quot;: [&quot;Editor&quot;],
+  &quot;autoReferenced&quot;: true
+}</code></pre>
+<div class="table-scroll"><table><thead><tr><th>利用形態</th><th>必要な参照</th></tr></thead><tbody><tr><td>イベントハンドラーと第三者の通知契約だけ</td><td><code>EditorEventHandlers.Editor</code>と通知型を定義するアセンブリ</td></tr><tr><td>標準アバター条件のイベントハンドラー</td><td>上記asmdefの2アセンブリ</td></tr><tr><td>後述の独自の条件プロバイダーを含むAND例</td><td>上記2つと<code>Example.Events.Contracts</code></td></tr><tr><td>MAを設定するイベントハンドラー</td><td>使用する条件の参照に加え<code>nadena.dev.modular-avatar.core</code></td></tr></tbody></table></div>
+<p>asmdefのreferencesはアセンブリ名です。パッケージ導入の依存宣言とは別に設定します。標準条件プロバイダーのパッケージIDは<code>io.github.merciagrimauge.avatar-placement</code>、イベントディスパッチャーは<code>io.github.merciagrimauge.editor-event-handlers</code>です。第三者の条件プロバイダーの通知型を使うイベントハンドラーには、その契約を含むパッケージも必要です。</p>
+<p>条件プロバイダーの実装が未登録でも、通知型のアセンブリが存在すればイベントハンドラーを登録できます。通知型のアセンブリ自体がない場合はイベントハンドラーがコンパイルできません。「待機する」ことと「依存パッケージがなくてもコンパイルできる」ことを混同しないでください。</p>
+<h2>単一条件のイベントハンドラーを作る</h2>
+<p>次のブロックは1つの完全なイベントハンドラー実装です。アバターPrefab配置時、同名の子がなければ子を作ります。生成対象の名前は例示用です。</p>
+<pre><code>using AvatarPlacement.Editor;
+using EditorEventHandlers.Editor;
+using UnityEditor;
+
+namespace Example.AvatarFeature.Editor
+{
+    [InitializeOnLoad]
+    internal static class AvatarAdornmentRegistration
+    {
+        private static readonly EventSubscription Subscription;
+
+        static AvatarAdornmentRegistration()
+        {
+            Subscription = EditorEvents.Subscribe&lt;AvatarPlaced&gt;(
+                new Handler());
+        }
+
+        private sealed class Handler : IEventHandler&lt;AvatarPlaced&gt;
+        {
+            public string Id =&gt; &quot;example.avatar-feature.adornment&quot;;
+
+            public HandlerResult Execute(HandlerContext&lt;AvatarPlaced&gt; context)
+            {
+                context.CheckDeadline();
+                if (context.Event.Avatar == null || context.Event.Avatar != context.Root)
+                    return HandlerResult.Skip(&quot;Avatar is no longer available.&quot;);
+                if (context.Root.transform.Find(&quot;ExampleAdornment&quot;) != null)
+                    return HandlerResult.Skip(&quot;Already configured.&quot;);
+                context.CreateChild(&quot;ExampleAdornment&quot;);
+                return HandlerResult.Success();
+            }
+        }
+    }
+}</code></pre>
+<p>登録順は条件プロバイダーの初期化順に依存しません。条件プロバイダーが不在なら待機し、その後条件プロバイダーが登録されても過去の配置は再送しません。Editor起動・ドメインリロードでは上の初期化処理を再実行します。購読トークンはEditorドメイン内で保持され、UI設定と異常無効化は別に永続保存されます。</p>
+<p><code>Id</code>は製品ごとの安定した値に置き換えます。同じ通知型の購読IDは重複できません。ランダム値や起動ごとに変わるIDでは、保存した有効/無効・期限が次回の登録と結び付かなくなります。IDを変えて異常無効化を回避しません。</p>
+<p>動的な機能では所有者が<code>EventSubscription</code>を保持し、終了時にEditorメインスレッドで<code>Dispose()</code>します。参照を手放すだけでは解除されません。ドメインの間ずっと必要な上の購読では終了時の明示解除は不要です。</p>
+<h2>検出済みブレンドシェイプを使うイベントハンドラー</h2>
+<p>次は標準条件プロバイダーの一覧を使う完全なイベントハンドラーです。検出一覧のMesh/Index/Nameを再確認してから、対象Rendererの<code>updateWhenOffscreen</code>を設定します。製品の同期処理を実装するものではありません。</p>
+<pre><code>using System.Collections.Generic;
+using AvatarPlacement.Editor;
+using EditorEventHandlers.Editor;
+using UnityEditor;
+using UnityEngine;
+
+namespace Example.BreastFeature.Editor
+{
+    [InitializeOnLoad]
+    internal static class BreastRendererRegistration
+    {
+        private static readonly EventSubscription Subscription;
+
+        static BreastRendererRegistration()
+        {
+            Subscription = EditorEvents.Subscribe&lt;AvatarChildBreastBlendShapesPlaced&gt;(new Handler());
+        }
+
+        private sealed class Handler : IEventHandler&lt;AvatarChildBreastBlendShapesPlaced&gt;
+        {
+            public string Id =&gt; &quot;example.breast-feature.renderer-settings&quot;;
+
+            public HandlerResult Execute(HandlerContext&lt;AvatarChildBreastBlendShapesPlaced&gt; context)
+            {
+                context.CheckDeadline();
+                var notice = context.Event;
+                if (notice.Avatar == null || notice.Avatar != context.Root
+                    || notice.PlacedObject == null || notice.PlacedObject.transform.parent != context.Root.transform)
+                    return HandlerResult.Skip(&quot;Placement changed before execution.&quot;);
+
+                // Validate first, then edit. Skip must not follow tracked edits.
+                var targets = new HashSet&lt;SkinnedMeshRenderer&gt;();
+                foreach (var shape in notice.BreastBlendShapes)
+                {
+                    context.CheckDeadline();
+                    var renderer = shape.Renderer;
+                    if (renderer == null || shape.Mesh == null || renderer.sharedMesh != shape.Mesh
+                        || shape.Mesh.GetBlendShapeIndex(shape.Name) != shape.Index
+                        || (renderer.transform != notice.PlacedObject.transform
+                            &amp;&amp; !renderer.transform.IsChildOf(notice.PlacedObject.transform)))
+                        return HandlerResult.Skip(&quot;Detected shape is no longer valid.&quot;);
+                    if (!renderer.updateWhenOffscreen) targets.Add(renderer);
+                }
+                if (targets.Count == 0) return HandlerResult.Skip(&quot;Already configured.&quot;);
+                foreach (var renderer in targets)
+                {
+                    context.CheckDeadline();
+                    context.Modify(renderer, () =&gt; renderer.updateWhenOffscreen = true);
+                }
+                return HandlerResult.Success();
+            }
+        }
+    }
+}</code></pre>
+<p>検出結果は現在のUnityオブジェクトへの参照です。先に呼ばれたイベントハンドラーがMesh・階層・設定を変更する場合があるため、使用時に必要な状態を確認します。上の例は条件プロバイダーが渡したRendererだけを使い、アバターやシーン全体を再走査しません。同じRendererの重複編集も避けます。</p>
+<h2>ANDを購読するイベントハンドラー</h2>
+<p>次の例は<a href="#CONDITION_AUTHORING">独自の条件プロバイダーガイド</a>の公開通知型<code>Example.Events.CreatedObjectWithAudioSource</code>を使います。その契約アセンブリを参照して、このイベントハンドラーだけをコンパイルできます。イベントハンドラーから条件プロバイダーを登録するコードは不要です。</p>
+<pre><code>using System;
+using AvatarPlacement.Editor;
+using EditorEventHandlers.Editor;
+using Example.Events;
+using UnityEditor;
+
+namespace Example.CompositeFeature.Editor
+{
+    [InitializeOnLoad]
+    internal static class AvatarAudioRegistration
+    {
+        private static readonly EventSubscription Subscription;
+
+        static AvatarAudioRegistration()
+        {
+            Subscription = EditorEvents.SubscribeAll(new Handler(),
+                new Type[] { typeof(AvatarPlaced), typeof(CreatedObjectWithAudioSource) });
+        }
+
+        private sealed class Handler : IEventHandler&lt;CompositeEvent&gt;
+        {
+            public string Id =&gt; &quot;example.composite-feature.avatar-audio&quot;;
+
+            public HandlerResult Execute(HandlerContext&lt;CompositeEvent&gt; context)
+            {
+                context.CheckDeadline();
+                if (!context.Event.TryGet&lt;AvatarPlaced&gt;(out var avatar)
+                    || !context.Event.TryGet&lt;CreatedObjectWithAudioSource&gt;(out var audio)
+                    || avatar.Avatar == null || avatar.Avatar != context.Root
+                    || audio.Object != context.Root || audio.Audio == null
+                    || audio.Audio.gameObject != context.Root)
+                    return HandlerResult.Skip(&quot;Required object is no longer available.&quot;);
+                if (!audio.Audio.playOnAwake) return HandlerResult.Skip(&quot;Already configured.&quot;);
+                context.Modify(audio.Audio, () =&gt; audio.Audio.playOnAwake = false);
+                return HandlerResult.Success();
+            }
+        }
+    }
+}</code></pre>
+<p>型一覧は空でない、重複のない1〜100型で指定します。<code>null</code>、<code>void</code>、byref、pointer、open generic、<code>CompositeEvent</code>は依存型にできません。入れ子のAND/OR式はありません。登録時に一覧をコピーするため、後から配列を変更しても登録内容は変わりません。</p>
+<p>ANDは<strong>同じ1入力での全一致</strong>です。別の配置や別バッチの一致を蓄積しません。すべての条件プロバイダーが同じRootを返す必要があります。追加条件は「元の対象にどんな性質があるか」を同じ入力から判定する形にすると再利用できます。</p>
+<h2>ORを購読するイベントハンドラー</h2>
+<p>次の完全例は標準条件プロバイダーの2種類を購読し、選択された通知に応じて現在の対象を確認します。読み取り専用の処理なので<code>Skip</code>を返します。</p>
+<pre><code>using System;
+using AvatarPlacement.Editor;
+using EditorEventHandlers.Editor;
+using UnityEditor;
+using UnityEngine;
+
+namespace Example.AnyFeature.Editor
+{
+    [InitializeOnLoad]
+    internal static class AnyPlacementRegistration
+    {
+        private static readonly EventSubscription Subscription;
+
+        static AnyPlacementRegistration()
+        {
+            Subscription = EditorEvents.SubscribeAny(new Handler(), new Type[]
+            {
+                typeof(AvatarPlaced), typeof(AvatarChildBreastBlendShapesPlaced)
+            });
+        }
+
+        private sealed class Handler : IEventHandler&lt;CompositeEvent&gt;
+        {
+            public string Id =&gt; &quot;example.any-feature.placement-reader&quot;;
+
+            public HandlerResult Execute(HandlerContext&lt;CompositeEvent&gt; context)
+            {
+                context.CheckDeadline();
+                GameObject placed;
+                if (context.Event.TryGet&lt;AvatarPlaced&gt;(out var avatar))
+                    placed = avatar.Avatar;
+                else if (context.Event.TryGet&lt;AvatarChildBreastBlendShapesPlaced&gt;(out var child))
+                    placed = child.PlacedObject;
+                else
+                    return HandlerResult.Failure(&quot;No selected notification.&quot;);
+                if (placed == null) return HandlerResult.Skip(&quot;Placement no longer exists.&quot;);
+                // Product-specific read-only work can use placed and context.Root here.
+                return HandlerResult.Skip(&quot;Read-only inspection completed.&quot;);
+            }
+        }
+    }
+}</code></pre>
+<p>ORの<code>TryGet&lt;T&gt;</code>で取得できるのは、宣言順で最初に一致した1型だけです。全型を必須として読むAND用イベントハンドラーをそのまま転用しません。選択された条件プロバイダーのRootが唯一の編集範囲です。</p>
+<p>単一・AND・ORで同じ条件プロバイダーを要求しても、条件プロバイダーの評価は入力ごとに1回です。バッチのすべての条件プロバイダーを評価した後にイベントハンドラーを呼びます。ORの短絡は保存済み結果の選択だけで、条件プロバイダー評価自体を打ち切りません。ORでも必要なすべての条件プロバイダーの登録・有効状態を要求します。未登録・手動無効・異常無効の条件プロバイダーがあればその購読は待機します。</p>
+<h2>イベントハンドラーが守る実行・編集契約</h2>
+<div class="table-scroll"><table><thead><tr><th>項目</th><th>イベントハンドラーの実装方法</th></tr></thead><tbody><tr><td>実行方法</td><td>Editorメインスレッドで同期完了。<code>Execute</code>をasync化しない</td></tr><tr><td>正常終了</td><td><code>HandlerResult.Success()</code>。追跡した変更を確定</td></tr><tr><td>対象外・設定済み・検出後に対象が変わった</td><td>変更前に<code>Skip(reason)</code></td></tr><tr><td>編集後に継続できない</td><td><code>Failure(reason)</code>。追跡済み変更の復元と異常無効化</td></tr><tr><td>キャンセル</td><td><code>Cancel(reason)</code>も異常無効化。通常の「何もしない」はSkip</td></tr><tr><td>未指定結果</td><td><code>default(HandlerResult)</code>は禁止。Failure扱い</td></tr><tr><td>コンポーネント追加</td><td><code>context.AddComponent&lt;T&gt;(target)</code></td></tr><tr><td>プロパティ・シリアライズされたリストの設定</td><td><code>context.Modify(target, () =&gt; ...)</code>。delegateで変更するのはtargetだけ</td></tr><tr><td>作成・Prefab配置・親変更・削除</td><td><code>CreateChild</code> / <code>InstantiatePrefab</code> / <code>SetParent</code> / <code>Destroy</code></td></tr><tr><td>ループ・高コスト処理</td><td>区切りで<code>CheckDeadline()</code>。小さいユーザー設定値でも協調停止できる処理単位にする</td></tr><tr><td>再実行</td><td>現在の設定を確認し、既に目的どおりなら変更しない。イベントハンドラー自身の編集も後の入力になり得る</td></tr></tbody></table></div>
+<p>編集対象はRootとその子の同一シーンのGameObject/Componentだけです。Mesh、Material等のアセットをModifyする入口ではありません。Rootの削除・親変更、Transformの削除はできません。通知やcontextを保持して後から編集しません。直接Undo操作、遅延編集、モーダルUI、イベントループ再入を行いません。</p>
+<p>各条件プロバイダーとイベントハンドラーの期限は独立し、初期値・上限100 ms、利用者のUI設定範囲1〜100 msです。共有バッチ予算はありません。登録側は期限を変更・延長できません。管理側は戻った後にも期限を確認しますが、戻らない同期コードを強制killできません。</p>
+<p>ハンドラー間の実行順は公開契約に含めません。順序・優先度・順序の希望を指定するAPIはありません。イベントハンドラーは前後のイベントハンドラーの存在・正常終了・状態保存を前提にしません。条件プロバイダーのpayloadのUnity参照は共有され、完全な状態コピーではありません。</p>
+<p>復元対象はContextが追跡したUndo対応変更です。全アバターのメモリ保存ではありません。直接書き込み、外部ファイル、非シリアライズ状態、第三者Componentの副作用や遅延処理は対象外です。確定/復元の例外や実行後のRoot喪失では残りのバッチを即時停止します。Root喪失はイベントハンドラーがSuccessを返してもFailureと異常無効化になります。</p>
+<h2>状態・登録失敗・通知されない場合</h2>
+<p><code>EventSubscription</code>の公開状態は読み取り専用です。<code>IsEnabled</code>はユーザー設定と異常無効化を反映し、<code>IsActive</code>はさらに全依存条件プロバイダーの有効登録と全体停止していないことを要求します。<code>DisabledReason</code>、<code>LastResult</code>、<code>LastDuration</code>も確認できます。複合購読の<code>EventType</code>は<code>CompositeEvent</code>で、依存型は<code>ConditionTypes</code>、方式は<code>Mode</code>で読みます。</p>
+<p>手動の有効/無効、期限、異常無効化はプロジェクト・登録種別・通知型・Idに対応して保存します。Editor再起動や同じIDの再登録で異常を解除しません。利用者が<code>Tools / MerciaGrimauge / Editor Event Handlers</code>から有効化すると解除します。複合購読のモード・型一覧を変えても、同じ<code>CompositeEvent</code>とIdなら同じ保存設定を使います。イベントハンドラーに再有効化・他者管理のAPIはありません。</p>
+<div class="table-scroll"><table><thead><tr><th>症状</th><th>確認すること</th></tr></thead><tbody><tr><td>コンパイルできない</td><td>通知型を含むパッケージとasmdef参照、Editor専用設定</td></tr><tr><td>登録で例外</td><td>IDの空白/重複、不正な型一覧、メインスレッド、条件プロバイダーとイベントハンドラー合計100件上限。例外を無視して登録済み扱いにしない</td></tr><tr><td>EnabledだがWaiting</td><td>必要な条件プロバイダーの未登録/無効、SDKの不在、全体停止</td></tr><tr><td>有効なまま呼ばれない</td><td>条件プロバイダーの意味条件、対象入力種類、同一入力/Root要件、過去入力を再送しないこと</td></tr><tr><td>一度動いた後Disabled</td><td>異常理由、期限、Skip後の編集、未指定結果、例外、Root喪失</td></tr><tr><td>再起動してもDisabled</td><td>意図した保存動作。UIから再有効化して新しい入力で確認</td></tr></tbody></table></div>
+<p>Undo/Redoは保留入力を破棄して次のEditor更新まで除外します。Play/移行・コンパイル・アセット更新・Playerビルド・Undo処理中は実行しません。シーンロードや既存シーンの初期走査はありません。他ツールのUndo対応変更も届き得るため、人間による配置だけの証明にはなりません。</p>
+<h2>MA Blendshape Syncを設定するイベントハンドラーの設計</h2>
+<p>MAの1.18.7を対象にした接続情報です。条件プロバイダーが渡す配置対象のRenderer一覧を使い、イベントディスパッチャーへMA依存を追加せずにイベントハンドラーのパッケージへ依存を持たせます。</p>
+<p>1. 同期元の身体Rendererと、衣装側の対象Renderer・シェイプ名の対応を決めます。<code>breast</code>部分一致は検出条件であり、同名・同部位・互換性の証明ではありません。曖昧な対応はユーザー設定へ委ねます。 2. すべての参照・Mesh・シェイプ名・編集範囲を確認してから編集します。同期先Rendererと同じGameObjectに<code>ModularAvatarBlendshapeSync</code>を追加、または既存Componentを使用します。 3. <code>Bindings</code>に<code>BlendshapeBinding</code>を設定します。<code>ReferenceMesh</code>は<code>new AvatarObjectReference(sourceRenderer.gameObject)</code>、<code>Blendshape</code>は同期元名、<code>LocalBlendshape</code>は同期先名です。空のLocalBlendshapeは同期元と同名です。 4. 追加はContext.AddComponent、既存/追加ComponentのBindings編集はContext.Modifyで記録します。既存のユーザー設定を全面上書きせず、同じ同期先への設定競合と再実行を扱います。MAのBinding.Equalsは同期元参照と同期元名だけを比較するため、製品の重複・競合判定をそれだけへ委ねません。 5. <code>RemapCurve</code>と<code>RemapCurveIsValid</code>はMAの公開データです。恒等/反転等の設定を明確にします。再バインドの<code>Rebind</code>と編集更新はinternalで、外部向けの公開同期メソッドではありません。シリアライズ変更後のプレビュー更新を導入対象版で確認し、internalメソッドを反射で呼ぶ設計にしません。 6. 編集時プレビューとビルド後の初期値・アニメーション、Undo/Redo、失敗時のBindings復元を別々に確認します。MAの継続更新・OnValidate・遅延処理はイベントディスパッチャーのイベントハンドラー呼び出し後にも走るため、その時間や副作用までイベントハンドラーの期限/復元範囲に含めません。</p>
+<p>MAは編集時に値をコピーし、ビルド時にアニメーションへ同期先のカーブを適用します。同期元→中間→同期先の連鎖同期、VRChat標準の視線/口パクによる正確な同期は対象外です。ビルド時にComponentを生成するNDMF拡張なら、公式の拡張案内に従いGeneratingでMAより前に生成します。Editor配置時のイベントハンドラーとは別の実行入口です。</p>
+<p>出典: <a href="https://modular-avatar.nadena.dev/docs/reference/blendshape-sync" target="_blank" rel="noopener noreferrer">公式機能説明</a>、<a href="https://github.com/bdunderscore/modular-avatar/blob/1.18.7/Runtime/ModularAvatarBlendshapeSync.cs" target="_blank" rel="noopener noreferrer">1.18.7のComponent/Binding</a>、<a href="https://github.com/bdunderscore/modular-avatar/blob/1.18.7/Runtime/AvatarObjectReference.cs" target="_blank" rel="noopener noreferrer">参照API</a>、<a href="https://modular-avatar.nadena.dev/docs/extending" target="_blank" rel="noopener noreferrer">NDMFからの拡張</a>。この節は実装手順と公開データの説明であり、完成したMA同期ハンドラやその動作検証ではありません。</p>
+<h2>イベントハンドラーを完成と判断する確認項目</h2>
+<div class="table-scroll"><table><thead><tr><th>確認</th><th>合格条件</th></tr></thead><tbody><tr><td>依存と登録</td><td>自分のEditorアセンブリでコンパイル。条件プロバイダーのinternal実装・イベントディスパッチャーの管理入口を使わない</td></tr><tr><td>条件プロバイダーの任意の登録順</td><td>イベントハンドラー先行では待機、条件プロバイダー登録後の新規入力で実行。既存対象への再送なし</td></tr><tr><td>正常な対象</td><td>必要な変更だけが確定し、明示的なSuccess</td></tr><tr><td>不一致・設定済み</td><td>変更なしのSkip、複数回の入力で重複追加なし</td></tr><tr><td>検出後の変化</td><td>破棄・移動・Mesh交換を編集前に扱い、範囲外を編集しない</td></tr><tr><td>複合購読</td><td>同じ入力/RootのAND、先頭結果だけのOR、依存条件プロバイダーなし/無効時の待機</td></tr><tr><td>失敗・期限・キャンセル</td><td>追跡済み変更の復元、原因イベントハンドラーの無効化。別の正常イベントハンドラーを不必要に壊さない</td></tr><tr><td>保存とUI</td><td>異常無効化が再起動後にも復元。利用者の再有効化と期限が適用される</td></tr><tr><td>Undo/Redo・シーンロード</td><td>入力除外/再送なしを前提にし、既存対象への自動一括適用を期待しない</td></tr><tr><td>サードパーティ設定</td><td>Componentの設定復元と、プレビュー/ビルド結果・副作用を分けて確認</td></tr></tbody></table></div>
+<p>この表は新しいイベントハンドラーに適用する確認項目です。掲載だけでそのイベントハンドラーを実行検証済みとは扱いません。イベントディスパッチャーと標準条件プロバイダーの検証範囲は<a href="../../../docs/TEST_CASES.md">テストケース</a>にあります。</p>
+<p>全APIの引数・例外は<a href="#API_REFERENCE">API reference</a>、第三者の条件プロバイダーの追加方法は<a href="#CONDITION_AUTHORING">条件プロバイダーの作成ガイド</a>、その他の例は<a href="#CONTRACTS">実行契約</a>を参照してください。ライセンスは<a href="../LICENSE">MIT</a>です。</p></article>
+<article id="CONDITION_AUTHORING" hidden><h1>条件プロバイダーの作成・公開ガイド</h1>
+<p>条件プロバイダーの追加はライブラリ管理者だけに限定されません。第三者も自分のEditorアセンブリで<code>IEventCondition&lt;TEvent&gt;</code>を実装し、公開された<code>EditorEvents.RegisterCondition&lt;TEvent&gt;</code>で登録できます。イベントディスパッチャーの変更や継承、型別のハードコード、管理APIの開放は不要です。</p>
+<h2>通知契約をイベントハンドラーと共有する</h2>
+<p>イベントハンドラーは条件クラスではなく、厳密な通知型<code>TEvent</code>を購読します。通知型はpublicとして共有し、条件プロバイダーの判定実装はinternalにできます。同じ名前の型をイベントハンドラーがコピーして定義しても別の型なので配送されません。条件プロバイダーとイベントハンドラーは同じ契約アセンブリを参照してください。</p>
+<div class="table-scroll"><table><thead><tr><th>配布構成</th><th>使用方法</th></tr></thead><tbody><tr><td>標準条件プロバイダーのパッケージに通知型と実装を同梱</td><td>イベントハンドラーは標準パッケージを参照し、型を購読。標準条件プロバイダーが自動登録</td></tr><tr><td>第三者の条件プロバイダーが通知型と実装を同梱</td><td>イベントハンドラーはそのパッケージを参照。作者が提供する登録方法を使用</td></tr><tr><td>契約と判定実装を別アセンブリに分離</td><td>イベントハンドラーは契約だけを参照。実装が未登録なら待機。複数提供者は条件プロバイダーを1つだけ選択</td></tr></tbody></table></div>
+<p><strong>1つの通知型に登録できる条件プロバイダーは1つ</strong>です。異なるIdにしても同じTEventの2件目は拒否します。標準<code>AvatarPlaced</code>と別の意味で判定したい場合は、新しい通知型を定義します。標準条件プロバイダーの置き換えを自動で奪うAPIはありません。イベントハンドラーの購読は複数登録できます。</p>
+<h2>完全例: 公開通知型</h2>
+<p>この例は「Createdの対象自身にAudioSourceがある」を検出します。アバターやPrefabには限定しません。契約を<code>Example.Events.Contracts</code>アセンブリへ置くasmdef例です。</p>
+<pre><code>{
+  &quot;name&quot;: &quot;Example.Events.Contracts&quot;,
+  &quot;references&quot;: [],
+  &quot;includePlatforms&quot;: [&quot;Editor&quot;],
+  &quot;autoReferenced&quot;: false
+}</code></pre>
+<p>次のコードは契約アセンブリで単独コンパイルできます。イベントディスパッチャーや条件プロバイダーの実装へ依存しません。</p>
+<pre><code>using UnityEngine;
+
+namespace Example.Events
+{
+    /// &lt;summary&gt;A created scene object currently has an AudioSource on itself.&lt;/summary&gt;
+    public readonly struct CreatedObjectWithAudioSource
+    {
+        /// &lt;summary&gt;Created object selected as the transaction root.&lt;/summary&gt;
+        public GameObject Object { get; }
+        /// &lt;summary&gt;AudioSource on the object at detection time; recheck before editing.&lt;/summary&gt;
+        public AudioSource Audio { get; }
+
+        /// &lt;summary&gt;Creates a notification value without publishing it.&lt;/summary&gt;
+        /// &lt;param name=&quot;obj&quot;&gt;Created object.&lt;/param&gt;
+        /// &lt;param name=&quot;audio&quot;&gt;Its detected AudioSource.&lt;/param&gt;
+        public CreatedObjectWithAudioSource(GameObject obj, AudioSource audio)
+        { Object = obj; Audio = audio; }
+    }
+}</code></pre>
+<h2>完全例: 条件プロバイダーの実装と登録</h2>
+<p>別の<code>Example.Events.Provider.Editor</code>アセンブリに判定・登録を置きます。上の契約とイベントディスパッチャーを参照します。</p>
+<pre><code>{
+  &quot;name&quot;: &quot;Example.Events.Provider.Editor&quot;,
+  &quot;references&quot;: [&quot;EditorEventHandlers.Editor&quot;, &quot;Example.Events.Contracts&quot;],
+  &quot;includePlatforms&quot;: [&quot;Editor&quot;],
+  &quot;autoReferenced&quot;: true
+}</code></pre>
+<pre><code>using EditorEventHandlers.Editor;
+using Example.Events;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+
+namespace Example.Events.Provider.Editor
+{
+    [InitializeOnLoad]
+    internal static class AudioConditionRegistration
+    {
+        private static readonly ConditionRegistration Registration;
+
+        static AudioConditionRegistration()
+        {
+            Registration = EditorEvents.RegisterCondition&lt;CreatedObjectWithAudioSource&gt;(new Condition());
+        }
+
+        private sealed class Condition : IEventCondition&lt;CreatedObjectWithAudioSource&gt;
+        {
+            public string Id =&gt; &quot;example.events.created-object-with-audio-source&quot;;
+            public EditorChangeKind Changes =&gt; EditorChangeKind.Created;
+
+            public bool TryMatch(ConditionContext context,
+                out ConditionMatch&lt;CreatedObjectWithAudioSource&gt; match)
+            {
+                match = default;
+                context.CheckDeadline();
+                var change = context.Change;
+                if (change.Kind != EditorChangeKind.Created) return false;
+                var obj = change.GameObject;
+                if (obj == null || !obj.scene.IsValid() || !obj.scene.isLoaded
+                    || EditorUtility.IsPersistent(obj) || EditorSceneManager.IsPreviewScene(obj.scene)
+                    || PrefabStageUtility.GetPrefabStage(obj) != null
+                    || EditorSceneId.FromScene(obj.scene) != change.SceneId
+                    || !obj.TryGetComponent&lt;AudioSource&gt;(out var audio))
+                    return false;
+                context.CheckDeadline();
+                match = new ConditionMatch&lt;CreatedObjectWithAudioSource&gt;(
+                    new CreatedObjectWithAudioSource(obj, audio), obj);
+                return true;
+            }
+        }
+    }
+}</code></pre>
+<p>同じ入力を<code>AvatarPlaced</code>とANDで購読すると、「配置されたアバター自身にAudioSourceがある」場合に同じRootで一致します。<a href="#HANDLER_AUTHORING">イベントハンドラーのAND実装例</a>はこの契約だけを参照します。条件プロバイダーのクラスや登録トークンをイベントハンドラーへ公開する必要はありません。</p>
+<p>この例でイベントハンドラーを契約だけでコンパイルするためのasmdefは、<code>EditorEventHandlers.Editor</code>、<code>AvatarPlacement.Editor</code>、<code>Example.Events.Contracts</code>をreferencesに指定します。条件プロバイダー実装の<code>Example.Events.Provider.Editor</code>はイベントハンドラーのコンパイル依存ではありません。</p>
+<h2>条件プロバイダーの実装契約</h2>
+<div class="table-scroll"><table><thead><tr><th>項目</th><th>必要な設計</th></tr></thead><tbody><tr><td><code>Id</code></td><td>空白以外の安定した値。保存するユーザー設定・異常無効化の識別に使用</td></tr><tr><td><code>Changes</code></td><td>必要な公開EditorChangeKindのみ。None・未知ビットは登録不可。登録時に値を保持</td></tr><tr><td><code>TryMatch</code></td><td>同期・読み取り専用。falseでは出力は未使用、trueでは有効な通知とRootを返す</td></tr><tr><td>payload</td><td>public通知型。readonly struct、読み取り専用プロパティ/一覧を推奨。参照型の通知はnull不可</td></tr><tr><td>Root</td><td>通常の読み込み済みシーンのGameObject。アセット、Prefabステージ、プレビューシーンは対象外</td></tr><tr><td>対象の選び方</td><td>入力で変更された対象から必要な範囲だけを判定。全シーン走査を判定の既定にしない</td></tr><tr><td>コスト</td><td>getterは軽量にし、判定ループ・高コスト処理の区切りでCheckDeadline</td></tr><tr><td>寿命</td><td>tokenを保持し、動的な所有機能が終了する場合だけEditorメインスレッドでDispose</td></tr></tbody></table></div>
+<p>Unityオブジェクトを変更したり、直接Undo操作・非同期編集・遅延編集・モーダル表示・イベントループ再入を行いません。参照を渡せるAPIですが、読み取り専用性を強制する隔離機構ではありません。通知を作っても任意に発火させるpublic APIはありません。</p>
+<p>通知のRootはイベントハンドラーの編集範囲を決めます。例えば子が追加された条件で親アバターをRootにすれば、イベントハンドラーは親アバター以下を編集できます。payloadに別対象の参照を含めても、その対象がRoot外なら編集範囲は広がりません。複合ANDで使う条件プロバイダーは、同じ入力に対して他の条件プロバイダーと同じRootを選べるかを契約に示します。</p>
+<p>入力のKind・ID・親遷移は通知時の情報ですが、Unity参照は判定時/実行時の現在状態です。SceneId、NewParentId等が意味条件に必要なら現在の対象と照合します。<code>EditorObjectId.IsValid</code>は対象が現存する証明ではなく、IDはセッションをまたいで保存しません。</p>
+<p>条件に有効な購読者がいなければ評価されません。単一/AND/ORの多数のイベントハンドラーが同じ条件プロバイダーを使っても入力ごとの評価は1回です。全バッチの条件プロバイダー評価後にイベントハンドラーが実行されます。条件プロバイダーは呼び出し回数や順序に依存した通知蓄積を行わず、必要な状態をpayloadへ渡します。重複排除のためBatchIdを使う場合はその範囲と失効を契約へ記載します。</p>
+<p>判定の例外・期限超過・不正なtrue結果では条件プロバイダーを異常無効化します。falseでも戻った後に期限を確認します。依存するイベントハンドラーは待機し、ORの別の枝で故障を迂回しません。初期値/上限100 ms、ユーザー設定1〜100 ms、条件登録と購読の合計100件です。条件プロバイダー自身が上限や設定を変更するpublic APIはありません。</p>
+<p>SDK等が必要な条件プロバイダーは、どの依存があれば登録するかを示します。依存のない環境を対応済みと扱わず、不在で未登録になるのか、コンパイル依存なのかを区別します。標準条件プロバイダーの自動登録を追加の条件プロバイダー側から重ねて実行しません。</p>
+<h2>イベントハンドラーの作者へ公開する条件仕様</h2>
+<p>各条件プロバイダーは次の表を埋めた資料を、通知契約と一緒に提供してください。イベントハンドラーの作者がイベントディスパッチャー/条件プロバイダーのソースを読まずに購読方式を決められることを目的にします。</p>
+<div class="table-scroll"><table><thead><tr><th>項目</th><th>上の例の公開仕様</th></tr></thead><tbody><tr><td>パッケージ / アセンブリ</td><td>例示用契約<code>Example.Events.Contracts</code>。実製品ではパッケージIDと導入条件も記載</td></tr><tr><td>完全修飾通知型</td><td><code>Example.Events.CreatedObjectWithAudioSource</code></td></tr><tr><td>条件ID</td><td><code>example.events.created-object-with-audio-source</code></td></tr><tr><td>登録方法 / 寿命</td><td>ProviderアセンブリのInitializeOnLoadによる自動登録、Editorドメイン内</td></tr><tr><td>入力Kind</td><td>Createdのみ</td></tr><tr><td>判定の意味</td><td>Created対象自身が通常シーンにあり、その時点でAudioSourceを持つ</td></tr><tr><td>除外</td><td>アセット、Prefabステージ、プレビュー、ロード前、通知シーンから移動した対象</td></tr><tr><td>payload</td><td>Object=作成対象、Audio=そのAudioSource。Unity参照は後で変わり得る</td></tr><tr><td>transaction Root</td><td>Object自身</td></tr><tr><td>重複 / 再通知</td><td>独自のバッチ内重複排除なし。シーンロード・後からのAudioSource追加・過去配置の再送なし</td></tr><tr><td>ANDの利用</td><td>同じCreated入力で同じRootを返す条件と結合可能</td></tr><tr><td>性能 / キャッシュ</td><td>対象1つのコンポーネント検索のみ。通知履歴・全シーンキャッシュなし</td></tr><tr><td>依存 / バージョン</td><td>Unity Editorとイベントディスパッチャー。標準アバター条件やSDKを条件プロバイダー自身では要求しない</td></tr><tr><td>失敗時</td><td>イベントディスパッチャーの期限/異常無効化へ従う。再起動で故障を解除しない</td></tr></tbody></table></div>
+<p>通知型を変える場合、既存イベントハンドラーのコンパイル依存と厳密型の購読が変わります。同じ型の意味やRootを変更する場合も契約変更として扱います。新しい意味条件を既存型の名前だけで偽装しません。</p>
+<h2>条件プロバイダーの確認項目</h2>
+<p>入力の意味に一致/不一致する対象、対象の破棄・移動、シーン/Prefabステージ除外、通知payloadとRoot、独自の重複排除・キャッシュ失効、期限・異常無効化を確認します。イベントハンドラーが先に登録された場合、複数のイベントハンドラーが評価を共有する場合、同じ通知型の条件プロバイダーの二重登録拒否も確認します。</p>
+<p>仕様を公開しただけで入力を検証済みとは扱いません。イベントディスパッチャーにはシーンロード通知、初期全シーン探索、ユーザー操作だけの厳密な識別がありません。追加の条件プロバイダーはイベントディスパッチャーが公開するUnity変更Kindの範囲内で意味を定義します。新しいネイティブ通知源が必要な場合は、条件プロバイダーの登録だけで実現する範囲とは区別します。</p>
+<p><a href="#API_REFERENCE">API reference</a> / <a href="#HANDLER_AUTHORING">イベントハンドラーの作成ガイド</a> / <a href="#CONTRACTS">実行契約</a></p></article>
+<article id="CONTRACTS" hidden><h1>実行契約とライフサイクル</h1>
+<p>条件プロバイダーとイベントハンドラーを登録した後の動作を説明します。メソッドのシグネチャ・引数・戻り値・例外は<a href="#API_REFERENCE">APIリファレンス</a>を参照してください。</p>
+<h2>登録と解除</h2>
+<p>通知型は厳密な型で識別します。同名の別型や基底・派生型を同じ配送先として扱いません。各通知型の条件は1件だけ登録できます。ハンドラーは対応する条件がなくても購読でき、その条件が登録・有効化されるまで待機します。</p>
+<p>登録数の上限は<strong>条件登録と購読の合計100件</strong>です。無効・待機中・登録処理中の予約も含みます。複合購読は1枠、依存する条件登録はそれぞれ1枠です。枠の予約は実装のgetterを読む前に行い、上限到達時はgetterを呼ばず拒否します。登録失敗では予約を解放し、getterの例外は呼び出し元へ伝播します。getterは軽量な処理にしてください。</p>
+<p>ディスパッチャーは登録した実装とトークンを強参照します。トークンを手放しても登録は残ります。解除にはEditorメインスレッドで<code>Dispose()</code>を呼びます。同じトークンの再解除は無操作です。条件を解除すると、その購読は解除されず待機します。</p>
+<p>登録の寿命はEditorドメイン内です。<code>InitializeOnLoad</code>などで必要に応じて再登録します。通知の再送や既存シーンの初期探索はありません。任意の通知を投入する公開API、実行環境を差し替える公開APIはありません。</p>
+<h2>判定結果の共有と配送</h2>
+<p>バッチ開始時の登録構成から配送先を決めます。新規登録は次バッチから対象です。解除・無効化は残りの配送にも反映します。依存条件が解除・無効化・別登録へ置換された場合、保存済みの結果は配送に使いません。ORで選択されなかった依存条件もこの確認の対象です。</p>
+<p>有効な購読に必要な条件だけを評価します。同じ入力変更1件につき各条件を最大1回評価し、単一・AND・OR購読で結果を共有します。指定された入力Kindに関心がない条件は、その入力では不一致です。<strong>バッチ全体の条件評価が終わってからハンドラーを実行</strong>します。</p>
+<p>ハンドラーは逐次実行します。実行順と先後関係は公開契約に含めず、登録側から希望・優先度を指定するAPIもありません。登録順・ID・管理画面の表示位置から実行順を前提にしないでください。ハンドラーは前後のハンドラーの存在・成功・対象状態を前提にせず、使用する参照を実行時に確認してください。</p>
+<p>通知値は購読者間で共有されます。読み取り専用の型・一覧を使っても、含まれるUnity参照の状態は後で変わり得ます。入力の種類・識別子・親遷移は保存しますが、オブジェクト全体の状態を凍結しません。<code>BatchId</code>とUnity識別子は一時的な値で、永続保存に使用しません。</p>
+<h2>ANDとOR</h2>
+<div class="table-scroll"><table><thead><tr><th>購読</th><th>同じ入力変更での動作</th><th>ハンドラーへ渡す結果</th></tr></thead><tbody><tr><td><code>Subscribe&lt;TEvent&gt;</code></td><td>対応する1条件が一致</td><td><code>TEvent</code></td></tr><tr><td><code>SubscribeAll</code></td><td>全条件が一致し、同じRootとシーンを返す</td><td>全条件の結果を含む<code>CompositeEvent</code></td></tr><tr><td><code>SubscribeAny</code></td><td>型一覧の先頭から最初に一致した条件を選ぶ</td><td>その1条件の結果だけを含む<code>CompositeEvent</code></td></tr></tbody></table></div>
+<p>両複合モードで、すべての依存条件が登録済みかつ有効であることを要求します。未登録・手動無効・異常無効を「不一致」とみなしてORで迂回しません。</p>
+<p>ORの短絡は保存済み結果の選択に適用します。必要な条件の評価そのものは省略しません。別入力・別バッチの一致を蓄積して結合すること、AND/ORの混在や入れ子、Rootの範囲を合成して広げることはありません。</p>
+<p>型一覧は登録時にコピーして順序を保持します。購読後に元の配列を変更しても条件構成は変わりません。型一覧の制約と登録時の例外は<a href="#EditorEvents">EditorEvents</a>、結果の取得方法は<a href="#CompositeEvent">CompositeEvent</a>を参照してください。</p>
+<h2>呼び出しの期限</h2>
+<p>条件・ハンドラーの期限は<strong>各呼び出しで独立</strong>しています。既定値・上限は100 ms、管理ウィンドウから1〜100 msの整数で変更できます。共有のバッチ時間予算はありません。呼び出し開始時の設定をコンテキストへ保持し、登録側は期限変更・延長・再有効化を行えません。</p>
+<p>処理の区切りで<code>CheckDeadline()</code>を呼びます。ディスパッチャーも処理が戻った後に期限を確認し、条件の不一致も確認対象です。メインスレッド上の同期呼び出しを強制停止する機構はありません。制御が戻らない無限ループも協調的な期限検査で停止できるとは扱いません。</p>
+<p><code>ConditionContext</code>は判定中、<code>HandlerContext</code>は実行中だけ使用します。終了済みコンテキストの期限検査・編集は拒否します。後で行う作業へ持ち越さず、非同期編集・遅延編集・モーダル表示・イベントループ再入・直接Undo操作を行わないでください。</p>
+<h2>終了結果と無効化</h2>
+<div class="table-scroll"><table><thead><tr><th>終了状態</th><th>ディスパッチャーの処理</th></tr></thead><tbody><tr><td><code>Succeeded</code></td><td>期限と実行後の確認を通過すれば追跡済み変更を確定</td></tr><tr><td><code>Skipped</code></td><td>追跡済み変更がなければ次へ継続。変更後のSkipは失敗扱い</td></tr><tr><td><code>Failed</code> / <code>Cancelled</code></td><td>追跡済み変更を復元し、その購読を異常無効化</td></tr><tr><td><code>Unspecified</code> / 不正値</td><td>契約違反として失敗扱い</td></tr></tbody></table></div>
+<p>ハンドラーの通常例外・期限超過は<code>Failed</code>、<code>OperationCanceledException</code>は<code>Cancelled</code>へ変換します。復元が成功すれば次の購読へ進めます。条件の例外・期限超過・不正な一致結果ではその条件を異常無効化し、依存する購読を待機させます。条件は読み取り専用の契約であり、条件が直接変更したUnity状態を復元する処理はありません。</p>
+<p>確定・復元の異常、またはハンドラー実行後のRoot喪失では、原因の購読を異常無効化し、残りの購読・通知を即時打ち切ります。<code>Success()</code>を返していても、Rootが失われていれば<code>LastResult</code>を失敗へ更新します。</p>
+<p>全体停止はメモリ上の状態で、ドメインリロードまたはEditor再起動で解除されます。原因登録の異常無効化は永続記録として残ります。再開前にConsoleとシーンを確認してください。</p>
+<h2>編集と復元の範囲</h2>
+<p>編集範囲は条件が指定した通常シーンのRootと子階層です。編集対象は同じシーンのGameObject/Componentで、永続アセットではない必要があります。通知にRoot外の参照が含まれても編集範囲は広がりません。</p>
+<p>最初のコンテキスト編集でUndoグループを開始し、必要な対象とPrefabのPropertyModificationを記録します。<code>Modify</code>は指定した対象のシリアライズ可能なプロパティだけを編集します。作成・削除・親変更には専用メソッドを使い、別対象の変更は個別に記録します。<a href="#HandlerContext">HandlerContext</a>に対象制約と例外を記載しています。</p>
+<p>復元はその購読の追跡済み変更に限ります。元のユーザー操作と、前の正常終了した購読の変更を保持します。階層全体のメモリ保存ではなく、直接書き込み・外部ファイル・非シリアライズ状態・コンポーネントの副作用・後から実行される処理は対象外です。Rootの直接破壊も復元を意味しません。dirty状態や既存Redo履歴が変わる場合があります。</p>
+<p>Unity参照への直接変更を遮断するサンドボックスではありません。登録実装は公開契約に従い、第三者Componentの継続更新やライフサイクルの副作用も個別に扱ってください。</p>
+<h2>管理ウィンドウと設定保存</h2>
+<p>管理ウィンドウは<code>Tools / MerciaGrimauge / Editor Event Handlers</code>です。有効/無効、独立した期限、購読条件、取得できる条件ソースを確認できます。設定変更はユーザー操作用の内部管理APIで行い、登録実装には公開しません。</p>
+<p>手動設定と異常無効化理由は、プロジェクト・登録種別・通知型・IDに対応してEditorPrefsへ保存します。同じIDの再登録・ドメインリロード・Editor再起動でも異常無効化は残ります。UIから有効化すると異常理由を解除し、手動無効化した場合はその指定を優先します。</p>
+<p>複合購読の設定は<code>CompositeEvent</code>とハンドラーIDで識別し、モード・型一覧をキーに含めません。構成を変えて同じIDで再登録すると設定を引き継ぎます。別機能は別IDにしてください。</p>
+<p>実装には旧SessionStateの異常理由を引き継ぐ分岐が残っています。永続記録がない場合だけ移行し、永続記録があれば優先します。現在の登録側がSessionStateへ保存する必要はありません。</p>
+<h2>Unity入力とメモリの寿命</h2>
+<p>Unity変更通知のうち、購読に必要な種類だけを受け取ります。Play中・移行中、コンパイル・アセット更新・Playerビルド・Undo処理中は実行しません。Undo/Redoでは保留通知を破棄し、次のEditor更新まで除外します。同じ周期の独立した変更も除外される場合があります。</p>
+<p>通知は変更の発生元の証明ではありません。他ツールやハンドラー自身の後の変更も届き得ます。シーン読み込み専用の通知、既存シーンの一括探索、常時の入力・選択監視はありません。公開Kindの一覧は<a href="#EditorChangeKind">EditorChangeKind</a>を参照してください。</p>
+<p>同じ更新までに種類と全識別子が同じ入力を重複排除します。通知キューは更新後に内容をクリアし、確保容量を再利用します。キュー件数のハード上限はありません。判定結果はバッチ内だけで共有し、配送後に解放します。通知履歴として保持し続ける設計ではありません。</p>
+<h2>関連資料</h2>
+<p><a href="#QUICKSTART">クイックスタート</a> / <a href="#HANDLER_AUTHORING">イベントハンドラーガイド</a> / <a href="#CONDITION_AUTHORING">条件プロバイダーガイド</a> / <a href="#API_REFERENCE">API一覧</a></p></article>
+<article id="CompositeEvent" hidden><h1><code>CompositeEvent</code></h1>
+<ul><li>名前空間: <code>EditorEventHandlers.Editor</code></li><li>アセンブリ: <code>EditorEventHandlers.Editor</code></li><li>対象: Unity Editor</li></ul>
+<p>AND/ORで選択した条件の通知を型ごとに取得です。</p>
+<h2>定義</h2>
+<pre><code>public sealed class CompositeEvent</code></pre>
+<p>The collection is immutable; contained notification objects retain their original references. Any exposes only its first matching result.</p>
+<p>公開コンストラクターはありません。</p>
+<h2>メンバー一覧</h2>
+<div class="table-scroll"><table><thead><tr><th>メンバー</th><th>概要</th></tr></thead><tbody><tr><td><a href="#CompositeEvent/member-413da24e39dd">public EditorChange Change { get; }</a></td><td>The input change shared by every evaluated condition in this combination.</td></tr><tr><td><a href="#CompositeEvent/member-386c537bfaec">public IReadOnlyList&lt;Type&gt; RequiredTypes { get; }</a></td><td>Immutable required notification types in the subscription&#x27;s declaration order.</td></tr><tr><td><a href="#CompositeEvent/member-be21240ee1d1">public bool TryGet&lt;TEvent&gt;(out TEvent notification)</a></td><td>Reads a selected notification by its exact declared type.</td></tr></tbody></table></div>
+<a id="member-413da24e39dd"></a>
+<h2><code>Change</code></h2>
+<pre><code>public EditorChange Change { get; }</code></pre>
+<p>The input change shared by every evaluated condition in this combination.</p>
+<a id="member-386c537bfaec"></a>
+<h2><code>RequiredTypes</code></h2>
+<pre><code>public IReadOnlyList&lt;Type&gt; RequiredTypes { get; }</code></pre>
+<p>Immutable required notification types in the subscription&#x27;s declaration order.</p>
+<a id="member-be21240ee1d1"></a>
+<h2><code>TryGet&lt;T&gt;</code></h2>
+<pre><code>public bool TryGet&lt;TEvent&gt;(out TEvent notification)</code></pre>
+<p>Reads a selected notification by its exact declared type.</p>
+<h3>型パラメーター</h3>
+<div class="table-scroll"><table><thead><tr><th>名前</th><th>説明</th></tr></thead><tbody><tr><td><code>TEvent</code></td><td>Exact condition notification type; derived or assignable types are not substituted.</td></tr></tbody></table></div>
+<h3>引数</h3>
+<div class="table-scroll"><table><thead><tr><th>名前</th><th>説明</th></tr></thead><tbody><tr><td><code>notification</code></td><td>Saved result when present, otherwise the type&#x27;s default value.</td></tr></tbody></table></div>
+<h3>戻り値</h3>
+<p>Whether the combination exposes a notification of this exact type.</p>
+<h2>使用上の注意</h2>
+<p>複合購読へ渡すsealed classです。公開コンストラクターはありません。</p>
+<p>Allでは全条件の通知を取得できます。Anyでは登録した一覧の先頭から最初に一致した1型だけを取得でき、同じ入力で他の条件も一致していても含めません。Anyの編集範囲は選択された条件のRootです。Allは全条件のRootが同一の場合だけ発火し、異なるRootを合成して編集範囲を広げません。</p>
+<p>すべての依存条件が登録済みかつ有効であることが両モードの前提です。条件の不在・無効化・異常は「不一致」としてORで迂回せず、その購読を待機させます。入力種類を購読しない条件プロバイダーの結果は、その入力では不一致です。</p>
+<p>必要な条件プロバイダーは入力ごとに各1回評価し、単一購読・複合購読で結果を共有します。全バッチの条件プロバイダー評価後にイベントハンドラーを実行します。ORの短絡は保存済み結果を選ぶ処理にだけ適用し、最初の一致が見つかった後も必要な条件プロバイダーの評価を省略しません。通知内のUnity参照は現在の対象であり、完全な状態コピーではありません。</p>
+<h2>関連資料</h2>
+<p><a href="#API_REFERENCE">API一覧</a> / <a href="#CONTRACTS">実行契約</a> / <a href="#HANDLER_AUTHORING">ハンドラーガイド</a> / <a href="#CONDITION_AUTHORING">条件ガイド</a></p></article>
+<article id="ConditionContext" hidden><h1><code>ConditionContext</code></h1>
+<ul><li>名前空間: <code>EditorEventHandlers.Editor</code></li><li>アセンブリ: <code>EditorEventHandlers.Editor</code></li><li>対象: Unity Editor</li></ul>
+<p>判定中の入力・バッチ番号・期限です。</p>
+<h2>定義</h2>
+<pre><code>public sealed class ConditionContext</code></pre>
+<p>Use on the editor main thread during evaluation only; do not retain for later work.</p>
+<p>公開コンストラクターはありません。</p>
+<h2>メンバー一覧</h2>
+<div class="table-scroll"><table><thead><tr><th>メンバー</th><th>概要</th></tr></thead><tbody><tr><td><a href="#ConditionContext/member-db4f61621513">public EditorChange Change { get; }</a></td><td>Input change being evaluated.</td></tr><tr><td><a href="#ConditionContext/member-62a4a3a7a4ed">public long BatchId { get; }</a></td><td>Temporary batch number for deduplication; not a persistent identity.</td></tr><tr><td><a href="#ConditionContext/member-2be2d9f3b629">public TimeSpan TimeLimit { get; }</a></td><td>Independent deadline captured when this invocation starts.</td></tr><tr><td><a href="#ConditionContext/member-989c9754c54b">public TimeSpan Elapsed { get; }</a></td><td>Time elapsed since this context was created.</td></tr><tr><td><a href="#ConditionContext/member-802010a3c07f">public void CheckDeadline()</a></td><td>Checks the editor thread, invocation lifetime, and cooperative deadline.</td></tr></tbody></table></div>
+<a id="member-db4f61621513"></a>
+<h2><code>Change</code></h2>
+<pre><code>public EditorChange Change { get; }</code></pre>
+<p>Input change being evaluated.</p>
+<a id="member-62a4a3a7a4ed"></a>
+<h2><code>BatchId</code></h2>
+<pre><code>public long BatchId { get; }</code></pre>
+<p>Temporary batch number for deduplication; not a persistent identity.</p>
+<a id="member-2be2d9f3b629"></a>
+<h2><code>TimeLimit</code></h2>
+<pre><code>public TimeSpan TimeLimit { get; }</code></pre>
+<p>Independent deadline captured when this invocation starts.</p>
+<a id="member-989c9754c54b"></a>
+<h2><code>Elapsed</code></h2>
+<pre><code>public TimeSpan Elapsed { get; }</code></pre>
+<p>Time elapsed since this context was created.</p>
+<a id="member-802010a3c07f"></a>
+<h2><code>CheckDeadline</code></h2>
+<pre><code>public void CheckDeadline()</code></pre>
+<p>Checks the editor thread, invocation lifetime, and cooperative deadline.</p>
+<h3>例外</h3>
+<div class="table-scroll"><table><thead><tr><th>型</th><th>発生条件</th></tr></thead><tbody><tr><td><code>System.InvalidOperationException</code></td><td>Called on another thread or after evaluation ended.</td></tr><tr><td><code>EditorEventHandlers.Editor.ConditionDeadlineExceededException</code></td><td>Elapsed time has reached the invocation limit.</td></tr></tbody></table></div>
+<h2>使用上の注意</h2>
+<p>管理側が判定ごとに生成するsealed classです。公開コンストラクターはありません。</p>
+<p>コンテキストを後の通知へ持ち越さないでください。判定終了後のCheckDeadlineは拒否します。</p>
+<h2>関連資料</h2>
+<p><a href="#API_REFERENCE">API一覧</a> / <a href="#CONTRACTS">実行契約</a> / <a href="#HANDLER_AUTHORING">ハンドラーガイド</a> / <a href="#CONDITION_AUTHORING">条件ガイド</a></p></article>
+<article id="ConditionDeadlineExceededException" hidden><h1><code>ConditionDeadlineExceededException</code></h1>
+<ul><li>名前空間: <code>EditorEventHandlers.Editor</code></li><li>アセンブリ: <code>EditorEventHandlers.Editor</code></li><li>対象: Unity Editor</li></ul>
+<p>条件の協調的な期限超過です。</p>
+<h2>定義</h2>
+<pre><code>public sealed class ConditionDeadlineExceededException : TimeoutException</code></pre>
+<p>公開コンストラクターはありません。</p>
+<h2>メンバー一覧</h2>
+<p>追加の公開メンバーはありません。<code>TimeoutException</code>から基本例外のメンバーを継承します。</p>
+<h2>関連資料</h2>
+<p><a href="#API_REFERENCE">API一覧</a> / <a href="#CONTRACTS">実行契約</a> / <a href="#HANDLER_AUTHORING">ハンドラーガイド</a> / <a href="#CONDITION_AUTHORING">条件ガイド</a></p></article>
+<article id="ConditionMatch-1" hidden><h1><code>ConditionMatch&lt;TEvent&gt;</code></h1>
+<ul><li>名前空間: <code>EditorEventHandlers.Editor</code></li><li>アセンブリ: <code>EditorEventHandlers.Editor</code></li><li>対象: Unity Editor</li></ul>
+<p>一致した通知値と編集範囲のルートです。</p>
+<h2>定義</h2>
+<pre><code>public readonly struct ConditionMatch&lt;TEvent&gt;</code></pre>
+<h2>メンバー一覧</h2>
+<div class="table-scroll"><table><thead><tr><th>メンバー</th><th>概要</th></tr></thead><tbody><tr><td><a href="#ConditionMatch-1/member-1b0989ef308a">public TEvent Event { get; }</a></td><td>Notification shared with matching subscribers; reference-type notifications must not be null.</td></tr><tr><td><a href="#ConditionMatch-1/member-ff4c32ce6008">public GameObject Root { get; }</a></td><td>Existing, ordinary loaded scene hierarchy that subscribers may edit through their contexts.</td></tr><tr><td><a href="#ConditionMatch-1/member-b5bfdf949266">public ConditionMatch(TEvent notification, GameObject transactionRoot)</a></td><td>Creates a match value. The dispatcher validates successful matches after evaluation.</td></tr></tbody></table></div>
+<a id="member-1b0989ef308a"></a>
+<h2><code>Event</code></h2>
+<pre><code>public TEvent Event { get; }</code></pre>
+<p>Notification shared with matching subscribers; reference-type notifications must not be null.</p>
+<a id="member-ff4c32ce6008"></a>
+<h2><code>Root</code></h2>
+<pre><code>public GameObject Root { get; }</code></pre>
+<p>Existing, ordinary loaded scene hierarchy that subscribers may edit through their contexts.</p>
+<a id="member-b5bfdf949266"></a>
+<h2><code>Constructor</code></h2>
+<pre><code>public ConditionMatch(TEvent notification, GameObject transactionRoot)</code></pre>
+<p>Creates a match value. The dispatcher validates successful matches after evaluation.</p>
+<h3>引数</h3>
+<div class="table-scroll"><table><thead><tr><th>名前</th><th>説明</th></tr></thead><tbody><tr><td><code>notification</code></td><td>Notification to deliver.</td></tr><tr><td><code>transactionRoot</code></td><td>Root of the editable hierarchy; this does not snapshot the entire hierarchy.</td></tr></tbody></table></div>
+<h2>使用上の注意</h2>
+<p>readonly structです。</p>
+<p>コンストラクター自体は内容を検証しません。管理側がtrueの結果を受け取った時点で検証します。Rootは通知の対象と同一である必要はありません。たとえば子の追加通知で、編集範囲を親アバターにできます。全階層の保存を意味しません。</p>
+<h2>関連資料</h2>
+<p><a href="#API_REFERENCE">API一覧</a> / <a href="#CONTRACTS">実行契約</a> / <a href="#HANDLER_AUTHORING">ハンドラーガイド</a> / <a href="#CONDITION_AUTHORING">条件ガイド</a></p></article>
+<article id="ConditionRegistration" hidden><h1><code>ConditionRegistration</code></h1>
+<ul><li>名前空間: <code>EditorEventHandlers.Editor</code></li><li>アセンブリ: <code>EditorEventHandlers.Editor</code></li><li>対象: Unity Editor</li></ul>
+<p>条件登録の状態・解除トークンです。</p>
+<h2>定義</h2>
+<pre><code>public sealed class ConditionRegistration : IDisposable</code></pre>
+<p>公開コンストラクターはありません。</p>
+<h2>メンバー一覧</h2>
+<div class="table-scroll"><table><thead><tr><th>メンバー</th><th>概要</th></tr></thead><tbody><tr><td><a href="#ConditionRegistration/member-2f04af916893">public string Id { get; }</a></td><td>Identifier captured at registration.</td></tr><tr><td><a href="#ConditionRegistration/member-42254476742f">public Type EventType { get; }</a></td><td>Exact notification type produced by this condition.</td></tr><tr><td><a href="#ConditionRegistration/member-fcaf429032a1">public EditorChangeKind Changes { get; }</a></td><td>Change categories captured at registration.</td></tr><tr><td><a href="#ConditionRegistration/member-30d93ae2400a">public TimeSpan TimeLimit { get; }</a></td><td>Current user-configured limit; each invocation captures its starting value.</td></tr><tr><td><a href="#ConditionRegistration/member-777c2705164a">public bool IsDisposed { get; }</a></td><td>Whether the condition has been explicitly removed.</td></tr><tr><td><a href="#ConditionRegistration/member-c18aee63ed88">public bool IsEnabled { get; }</a></td><td>Whether user settings and fault policy currently enable the condition.</td></tr><tr><td><a href="#ConditionRegistration/member-cb89bf583b82">public string DisabledReason { get; }</a></td><td>Reason for disabling; initially empty for an enabled condition.</td></tr><tr><td><a href="#ConditionRegistration/member-733c4dff35b9">public TimeSpan LastDuration { get; }</a></td><td>Most recent evaluation duration; zero before first evaluation.</td></tr><tr><td><a href="#ConditionRegistration/member-158e3eb82bbe">public void Dispose()</a></td><td>Removes this condition and releases its slot without removing its subscribers; repeated calls do nothing.</td></tr></tbody></table></div>
+<a id="member-2f04af916893"></a>
+<h2><code>Id</code></h2>
+<pre><code>public string Id { get; }</code></pre>
+<p>Identifier captured at registration.</p>
+<a id="member-42254476742f"></a>
+<h2><code>EventType</code></h2>
+<pre><code>public Type EventType { get; }</code></pre>
+<p>Exact notification type produced by this condition.</p>
+<a id="member-fcaf429032a1"></a>
+<h2><code>Changes</code></h2>
+<pre><code>public EditorChangeKind Changes { get; }</code></pre>
+<p>Change categories captured at registration.</p>
+<a id="member-30d93ae2400a"></a>
+<h2><code>TimeLimit</code></h2>
+<pre><code>public TimeSpan TimeLimit { get; }</code></pre>
+<p>Current user-configured limit; each invocation captures its starting value.</p>
+<a id="member-777c2705164a"></a>
+<h2><code>IsDisposed</code></h2>
+<pre><code>public bool IsDisposed { get; }</code></pre>
+<p>Whether the condition has been explicitly removed.</p>
+<a id="member-c18aee63ed88"></a>
+<h2><code>IsEnabled</code></h2>
+<pre><code>public bool IsEnabled { get; }</code></pre>
+<p>Whether user settings and fault policy currently enable the condition.</p>
+<a id="member-cb89bf583b82"></a>
+<h2><code>DisabledReason</code></h2>
+<pre><code>public string DisabledReason { get; }</code></pre>
+<p>Reason for disabling; initially empty for an enabled condition.</p>
+<a id="member-733c4dff35b9"></a>
+<h2><code>LastDuration</code></h2>
+<pre><code>public TimeSpan LastDuration { get; }</code></pre>
+<p>Most recent evaluation duration; zero before first evaluation.</p>
+<a id="member-158e3eb82bbe"></a>
+<h2><code>Dispose</code></h2>
+<pre><code>public void Dispose()</code></pre>
+<p>Removes this condition and releases its slot without removing its subscribers; repeated calls do nothing.</p>
+<h3>例外</h3>
+<div class="table-scroll"><table><thead><tr><th>型</th><th>発生条件</th></tr></thead><tbody><tr><td><code>System.InvalidOperationException</code></td><td>Called outside the editor main thread.</td></tr></tbody></table></div>
+<h2>使用上の注意</h2>
+<p>公開コンストラクターはありません。<code>Id:string</code>、<code>EventType:Type</code>、<code>Changes:EditorChangeKind</code>、<code>TimeLimit:TimeSpan</code>、<code>IsDisposed:bool</code>、<code>IsEnabled:bool</code>、<code>DisabledReason:string</code>、<code>LastDuration:TimeSpan</code> を読み取れます。LastDurationは初回判定前はゼロです。</p>
+<p><code>void Dispose()</code> は条件を解除して枠を解放します。メインスレッド専用で、別スレッドならInvalidOperationExceptionです。同じトークンの再Disposeは何もしません。対応する購読を解除せず、待機へ移します。</p>
+<h2>関連資料</h2>
+<p><a href="#API_REFERENCE">API一覧</a> / <a href="#CONTRACTS">実行契約</a> / <a href="#HANDLER_AUTHORING">ハンドラーガイド</a> / <a href="#CONDITION_AUTHORING">条件ガイド</a></p></article>
+<article id="EditorChange" hidden><h1><code>EditorChange</code></h1>
+<ul><li>名前空間: <code>EditorEventHandlers.Editor</code></li><li>アセンブリ: <code>EditorEventHandlers.Editor</code></li><li>対象: Unity Editor</li></ul>
+<p>Unity変更の種類・識別子・現在の対象参照です。</p>
+<h2>定義</h2>
+<pre><code>public readonly struct EditorChange : IEquatable&lt;EditorChange&gt;</code></pre>
+<p>Resolved Unity references expose current state for inspection; they may be null. This does not identify the user who caused a change.</p>
+<h2>メンバー一覧</h2>
+<div class="table-scroll"><table><thead><tr><th>メンバー</th><th>概要</th></tr></thead><tbody><tr><td><a href="#EditorChange/member-8f625f1983eb">public EditorChangeKind Kind { get; }</a></td><td>The single category of the input notification.</td></tr><tr><td><a href="#EditorChange/member-2ad54d145ab4">public EditorObjectId ObjectId { get; }</a></td><td>Temporary identity of the notification&#x27;s target.</td></tr><tr><td><a href="#EditorChange/member-f5e32bc32e9b">public EditorSceneId SceneId { get; }</a></td><td>Notification-time scene identity; for a parent change, the new scene.</td></tr><tr><td><a href="#EditorChange/member-c28d6fd26eca">public EditorSceneId PreviousSceneId { get; }</a></td><td>Previous scene for parent changes; the same as SceneId for destruction; otherwise default.</td></tr><tr><td><a href="#EditorChange/member-5aaee8265f2f">public EditorObjectId PreviousParentId { get; }</a></td><td>Previous parent for parent changes or last parent for destruction; otherwise default.</td></tr><tr><td><a href="#EditorChange/member-b46e44022508">public EditorObjectId NewParentId { get; }</a></td><td>New parent for parent changes; otherwise default.</td></tr><tr><td><a href="#EditorChange/member-74b60158dc49">public UnityEngine.Object Target { get; }</a></td><td>Resolves the current target on the editor main thread, or null if unavailable.</td></tr><tr><td><a href="#EditorChange/member-b26a07e929b0">public GameObject GameObject { get; }</a></td><td>Resolves the target GameObject, or a Component&#x27;s owning GameObject, on the editor main thread; otherwise null.</td></tr><tr><td><a href="#EditorChange/member-2376e7f1650f">public GameObject PreviousParent { get; }</a></td><td>Resolves the previous parent&#x27;s current GameObject on the editor main thread, or null.</td></tr><tr><td><a href="#EditorChange/member-6b7440a7d128">public GameObject NewParent { get; }</a></td><td>Resolves the new parent&#x27;s current GameObject on the editor main thread, or null.</td></tr><tr><td><a href="#EditorChange/member-720334c64a6e">public bool Equals(EditorChange other)</a></td><td>Compares the category and all stored identities without resolving Unity objects.</td></tr><tr><td><a href="#EditorChange/member-7dad5a325d0e">public override bool Equals(object obj)</a></td><td>Overrides System.Object.Equals(object).</td></tr><tr><td><a href="#EditorChange/member-9df9da68d15f">public override int GetHashCode()</a></td><td>Hash of the category and all identities for temporary collections.</td></tr></tbody></table></div>
+<a id="member-8f625f1983eb"></a>
+<h2><code>Kind</code></h2>
+<pre><code>public EditorChangeKind Kind { get; }</code></pre>
+<p>The single category of the input notification.</p>
+<a id="member-2ad54d145ab4"></a>
+<h2><code>ObjectId</code></h2>
+<pre><code>public EditorObjectId ObjectId { get; }</code></pre>
+<p>Temporary identity of the notification&#x27;s target.</p>
+<a id="member-f5e32bc32e9b"></a>
+<h2><code>SceneId</code></h2>
+<pre><code>public EditorSceneId SceneId { get; }</code></pre>
+<p>Notification-time scene identity; for a parent change, the new scene.</p>
+<a id="member-c28d6fd26eca"></a>
+<h2><code>PreviousSceneId</code></h2>
+<pre><code>public EditorSceneId PreviousSceneId { get; }</code></pre>
+<p>Previous scene for parent changes; the same as SceneId for destruction; otherwise default.</p>
+<a id="member-5aaee8265f2f"></a>
+<h2><code>PreviousParentId</code></h2>
+<pre><code>public EditorObjectId PreviousParentId { get; }</code></pre>
+<p>Previous parent for parent changes or last parent for destruction; otherwise default.</p>
+<a id="member-b46e44022508"></a>
+<h2><code>NewParentId</code></h2>
+<pre><code>public EditorObjectId NewParentId { get; }</code></pre>
+<p>New parent for parent changes; otherwise default.</p>
+<a id="member-74b60158dc49"></a>
+<h2><code>Target</code></h2>
+<pre><code>public UnityEngine.Object Target { get; }</code></pre>
+<p>Resolves the current target on the editor main thread, or null if unavailable.</p>
+<h3>例外</h3>
+<div class="table-scroll"><table><thead><tr><th>型</th><th>発生条件</th></tr></thead><tbody><tr><td><code>System.InvalidOperationException</code></td><td>Called outside the editor main thread.</td></tr></tbody></table></div>
+<a id="member-b26a07e929b0"></a>
+<h2><code>GameObject</code></h2>
+<pre><code>public GameObject GameObject { get; }</code></pre>
+<p>Resolves the target GameObject, or a Component&#x27;s owning GameObject, on the editor main thread; otherwise null.</p>
+<h3>例外</h3>
+<div class="table-scroll"><table><thead><tr><th>型</th><th>発生条件</th></tr></thead><tbody><tr><td><code>System.InvalidOperationException</code></td><td>Called outside the editor main thread.</td></tr></tbody></table></div>
+<a id="member-2376e7f1650f"></a>
+<h2><code>PreviousParent</code></h2>
+<pre><code>public GameObject PreviousParent { get; }</code></pre>
+<p>Resolves the previous parent&#x27;s current GameObject on the editor main thread, or null.</p>
+<h3>例外</h3>
+<div class="table-scroll"><table><thead><tr><th>型</th><th>発生条件</th></tr></thead><tbody><tr><td><code>System.InvalidOperationException</code></td><td>Called outside the editor main thread.</td></tr></tbody></table></div>
+<a id="member-6b7440a7d128"></a>
+<h2><code>NewParent</code></h2>
+<pre><code>public GameObject NewParent { get; }</code></pre>
+<p>Resolves the new parent&#x27;s current GameObject on the editor main thread, or null.</p>
+<h3>例外</h3>
+<div class="table-scroll"><table><thead><tr><th>型</th><th>発生条件</th></tr></thead><tbody><tr><td><code>System.InvalidOperationException</code></td><td>Called outside the editor main thread.</td></tr></tbody></table></div>
+<a id="member-720334c64a6e"></a>
+<h2><code>Equals</code></h2>
+<pre><code>public bool Equals(EditorChange other)</code></pre>
+<p>Compares the category and all stored identities without resolving Unity objects.</p>
+<h3>引数</h3>
+<div class="table-scroll"><table><thead><tr><th>名前</th><th>説明</th></tr></thead><tbody><tr><td><code>other</code></td><td>Change to compare.</td></tr></tbody></table></div>
+<h3>戻り値</h3>
+<p>Whether every stored field is equal.</p>
+<a id="member-7dad5a325d0e"></a>
+<h2><code>Equals</code></h2>
+<pre><code>public override bool Equals(object obj)</code></pre>
+<p>System.Object.Equals(object)をオーバーライドし、同じ識別子かを比較します。</p>
+<a id="member-9df9da68d15f"></a>
+<h2><code>GetHashCode</code></h2>
+<pre><code>public override int GetHashCode()</code></pre>
+<p>Hash of the category and all identities for temporary collections.</p>
+<h2>使用上の注意</h2>
+<p><code>readonly struct : IEquatable&lt;EditorChange&gt;</code>。管理側が作成する変更のスナップショットです。公開コンストラクターはありません。</p>
+<p>Target/GameObject/親の解決はメインスレッド専用です。通知時の種類・IDは保存されますが、対象のプロパティを凍結しません。参照先の状態は判定・実行時点のものです。Destroyedの対象自身を通常は解決できません。</p>
+<p><code>Equals(EditorChange)</code>、<code>Equals(object)</code>、<code>GetHashCode()</code> はKindと全識別子を比較します。これが同じ更新までの重複排除の単位です。異なる親遷移は別の入力です。defaultの変更は有効な入力通知ではありません。</p>
+<h2>関連資料</h2>
+<p><a href="#API_REFERENCE">API一覧</a> / <a href="#CONTRACTS">実行契約</a> / <a href="#HANDLER_AUTHORING">ハンドラーガイド</a> / <a href="#CONDITION_AUTHORING">条件ガイド</a></p></article>
+<article id="EditorChangeKind" hidden><h1><code>EditorChangeKind</code></h1>
+<ul><li>名前空間: <code>EditorEventHandlers.Editor</code></li><li>アセンブリ: <code>EditorEventHandlers.Editor</code></li><li>対象: Unity Editor</li></ul>
+<p>条件が必要とするUnity通知種類のフラグです。</p>
+<h2>定義</h2>
+<pre><code>[Flags] public enum EditorChangeKind</code></pre>
+<h2>メンバー一覧</h2>
+<div class="table-scroll"><table><thead><tr><th>メンバー</th><th>概要</th></tr></thead><tbody><tr><td><a href="#EditorChangeKind/member-84cb4ed6a844">None = 0</a></td><td>No category; cannot be registered as a condition&#x27;s change mask.</td></tr><tr><td><a href="#EditorChangeKind/member-5f71f985ed09">Created = 1</a></td><td>A GameObject hierarchy was created.</td></tr><tr><td><a href="#EditorChangeKind/member-cf96fa0396b0">ParentChanged = 2</a></td><td>A GameObject&#x27;s parent or scene changed.</td></tr><tr><td><a href="#EditorChangeKind/member-544472d517b9">PropertiesChanged = 4</a></td><td>A GameObject or Component&#x27;s properties changed.</td></tr><tr><td><a href="#EditorChangeKind/member-721160c562df">StructureChanged = 8</a></td><td>A GameObject&#x27;s Component structure changed.</td></tr><tr><td><a href="#EditorChangeKind/member-17b2ee79ed89">HierarchyChanged = 16</a></td><td>A GameObject hierarchy&#x27;s structure changed.</td></tr><tr><td><a href="#EditorChangeKind/member-500cfd21a724">ChildrenReordered = 32</a></td><td>Children were reordered.</td></tr><tr><td><a href="#EditorChangeKind/member-5f01b0e58280">Destroyed = 64</a></td><td>A GameObject hierarchy was destroyed.</td></tr><tr><td><a href="#EditorChangeKind/member-b38825d75834">PrefabUpdated = 128</a></td><td>A prefab instance was updated.</td></tr></tbody></table></div>
+<a id="member-84cb4ed6a844"></a>
+<h2><code>None</code></h2>
+<pre><code>None = 0</code></pre>
+<p>No category; cannot be registered as a condition&#x27;s change mask.</p>
+<a id="member-5f71f985ed09"></a>
+<h2><code>Created</code></h2>
+<pre><code>Created = 1</code></pre>
+<p>A GameObject hierarchy was created.</p>
+<a id="member-cf96fa0396b0"></a>
+<h2><code>ParentChanged</code></h2>
+<pre><code>ParentChanged = 2</code></pre>
+<p>A GameObject&#x27;s parent or scene changed.</p>
+<a id="member-544472d517b9"></a>
+<h2><code>PropertiesChanged</code></h2>
+<pre><code>PropertiesChanged = 4</code></pre>
+<p>A GameObject or Component&#x27;s properties changed.</p>
+<a id="member-721160c562df"></a>
+<h2><code>StructureChanged</code></h2>
+<pre><code>StructureChanged = 8</code></pre>
+<p>A GameObject&#x27;s Component structure changed.</p>
+<a id="member-17b2ee79ed89"></a>
+<h2><code>HierarchyChanged</code></h2>
+<pre><code>HierarchyChanged = 16</code></pre>
+<p>A GameObject hierarchy&#x27;s structure changed.</p>
+<a id="member-500cfd21a724"></a>
+<h2><code>ChildrenReordered</code></h2>
+<pre><code>ChildrenReordered = 32</code></pre>
+<p>Children were reordered.</p>
+<a id="member-5f01b0e58280"></a>
+<h2><code>Destroyed</code></h2>
+<pre><code>Destroyed = 64</code></pre>
+<p>A GameObject hierarchy was destroyed.</p>
+<a id="member-b38825d75834"></a>
+<h2><code>PrefabUpdated</code></h2>
+<pre><code>PrefabUpdated = 128</code></pre>
+<p>A prefab instance was updated.</p>
+<h2>使用上の注意</h2>
+<p><code>[Flags]</code> enumです。入力の <code>EditorChange.Kind</code> は単一種類、条件の <code>Changes</code> には組み合わせを指定します。</p>
+<p>通知種類はユーザー入力の発生元を表しません。他ツールのUndo対応変更も届き得ます。SceneOpened/SceneLoadedの通知、シーン全体の初期走査はありません。</p>
+<h2>関連資料</h2>
+<p><a href="#API_REFERENCE">API一覧</a> / <a href="#CONTRACTS">実行契約</a> / <a href="#HANDLER_AUTHORING">ハンドラーガイド</a> / <a href="#CONDITION_AUTHORING">条件ガイド</a></p></article>
+<article id="EditorEvents" hidden><h1><code>EditorEvents</code></h1>
+<ul><li>名前空間: <code>EditorEventHandlers.Editor</code></li><li>アセンブリ: <code>EditorEventHandlers.Editor</code></li><li>対象: Unity Editor</li></ul>
+<p>条件登録・単一購読・AND/OR購読の入口です。</p>
+<h2>定義</h2>
+<pre><code>public static class EditorEvents</code></pre>
+<p>公開コンストラクターはありません。</p>
+<h2>メンバー一覧</h2>
+<div class="table-scroll"><table><thead><tr><th>メンバー</th><th>概要</th></tr></thead><tbody><tr><td><a href="#EditorEvents/member-71a21c90ff6e">public static ConditionRegistration RegisterCondition&lt;TEvent&gt;(IEventCondition&lt;TEvent&gt; condition)</a></td><td>Registers one condition for the exact notification type, within the combined registration limit.</td></tr><tr><td><a href="#EditorEvents/member-95ae3c191f3d">public static EventSubscription Subscribe&lt;TEvent&gt;(IEventHandler&lt;TEvent&gt; handler)</a></td><td>Subscribes a synchronous handler; it waits while no active condition exists for this exact type.</td></tr><tr><td>[public static EventSubscription SubscribeAll(IEventHandler&lt;CompositeEvent&gt; handler, Type[] eventTypes)](#member-0bff08207ebc)</td><td>Subscribes when all declared conditions match the same input change and editable root.</td></tr><tr><td>[public static EventSubscription SubscribeAny(IEventHandler&lt;CompositeEvent&gt; handler, Type[] eventTypes)](#member-faa7de1e9c83)</td><td>Subscribes when any declared condition matches the same input change.</td></tr></tbody></table></div>
+<a id="member-71a21c90ff6e"></a>
+<h2><code>RegisterCondition&lt;T&gt;</code></h2>
+<pre><code>public static ConditionRegistration RegisterCondition&lt;TEvent&gt;(IEventCondition&lt;TEvent&gt; condition)</code></pre>
+<p>Registers one condition for the exact notification type, within the combined registration limit.</p>
+<h3>型パラメーター</h3>
+<div class="table-scroll"><table><thead><tr><th>名前</th><th>説明</th></tr></thead><tbody><tr><td><code>TEvent</code></td><td>Exact notification type.</td></tr></tbody></table></div>
+<h3>引数</h3>
+<div class="table-scroll"><table><thead><tr><th>名前</th><th>説明</th></tr></thead><tbody><tr><td><code>condition</code></td><td>Read-only condition; its registration getters must be lightweight.</td></tr></tbody></table></div>
+<h3>戻り値</h3>
+<p>A removal token and read-only condition state.</p>
+<h3>例外</h3>
+<div class="table-scroll"><table><thead><tr><th>型</th><th>発生条件</th></tr></thead><tbody><tr><td><code>System.ArgumentNullException</code></td><td>The condition is null.</td></tr><tr><td><code>System.ArgumentException</code></td><td>The identifier or change flags are invalid, or this type already has a condition.</td></tr><tr><td><code>System.InvalidOperationException</code></td><td>Called outside the editor main thread or the registration limit has been reached.</td></tr></tbody></table></div>
+<h3>備考</h3>
+<p>Getter exceptions propagate to the caller. Dropping the token does not unregister the condition.</p>
+<a id="member-95ae3c191f3d"></a>
+<h2><code>Subscribe&lt;T&gt;</code></h2>
+<pre><code>public static EventSubscription Subscribe&lt;TEvent&gt;(IEventHandler&lt;TEvent&gt; handler)</code></pre>
+<p>Subscribes a synchronous handler; it waits while no active condition exists for this exact type.</p>
+<h3>型パラメーター</h3>
+<div class="table-scroll"><table><thead><tr><th>名前</th><th>説明</th></tr></thead><tbody><tr><td><code>TEvent</code></td><td>Exact notification type.</td></tr></tbody></table></div>
+<h3>引数</h3>
+<div class="table-scroll"><table><thead><tr><th>名前</th><th>説明</th></tr></thead><tbody><tr><td><code>handler</code></td><td>Handler with a lightweight identifier getter.</td></tr></tbody></table></div>
+<h3>戻り値</h3>
+<p>A removal token and read-only subscription state.</p>
+<h3>例外</h3>
+<div class="table-scroll"><table><thead><tr><th>型</th><th>発生条件</th></tr></thead><tbody><tr><td><code>System.ArgumentNullException</code></td><td>The handler is null.</td></tr><tr><td><code>System.ArgumentException</code></td><td>The identifier is blank or already subscribed for this notification type.</td></tr><tr><td><code>System.InvalidOperationException</code></td><td>Called outside the editor main thread or the registration limit has been reached.</td></tr></tbody></table></div>
+<h3>備考</h3>
+<p>Identifier getter exceptions propagate. Dropping the token does not remove the subscription. Handler execution order is unspecified.</p>
+<a id="member-0bff08207ebc"></a>
+<h2><code>SubscribeAll</code></h2>
+<pre><code>public static EventSubscription SubscribeAll(IEventHandler&lt;CompositeEvent&gt; handler, Type[] eventTypes)</code></pre>
+<p>Subscribes when all declared conditions match the same input change and editable root.</p>
+<h3>引数</h3>
+<div class="table-scroll"><table><thead><tr><th>名前</th><th>説明</th></tr></thead><tbody><tr><td><code>handler</code></td><td>Synchronous composite handler with a stable identifier.</td></tr><tr><td><code>eventTypes</code></td><td>One to 100 distinct, closed notification types in declaration order; copied at registration.</td></tr></tbody></table></div>
+<h3>戻り値</h3>
+<p>A removal token and read-only subscription state.</p>
+<h3>例外</h3>
+<div class="table-scroll"><table><thead><tr><th>型</th><th>発生条件</th></tr></thead><tbody><tr><td><code>System.ArgumentNullException</code></td><td>The handler or type array is null.</td></tr><tr><td><code>System.ArgumentException</code></td><td>Types or identifier are invalid, or the composite identifier is already registered.</td></tr><tr><td><code>System.InvalidOperationException</code></td><td>Called outside the editor main thread or the combined registration limit has been reached.</td></tr></tbody></table></div>
+<h3>備考</h3>
+<p>Every required condition must be present and enabled. All required evaluations precede all handlers in a batch. Handler execution order is unspecified.</p>
+<a id="member-faa7de1e9c83"></a>
+<h2><code>SubscribeAny</code></h2>
+<pre><code>public static EventSubscription SubscribeAny(IEventHandler&lt;CompositeEvent&gt; handler, Type[] eventTypes)</code></pre>
+<p>Subscribes when any declared condition matches the same input change.</p>
+<h3>引数</h3>
+<div class="table-scroll"><table><thead><tr><th>名前</th><th>説明</th></tr></thead><tbody><tr><td><code>handler</code></td><td>Synchronous composite handler with a stable identifier.</td></tr><tr><td><code>eventTypes</code></td><td>One to 100 distinct, closed notification types in declaration order; copied at registration.</td></tr></tbody></table></div>
+<h3>戻り値</h3>
+<p>A removal token and read-only subscription state.</p>
+<h3>例外</h3>
+<div class="table-scroll"><table><thead><tr><th>型</th><th>発生条件</th></tr></thead><tbody><tr><td><code>System.ArgumentNullException</code></td><td>The handler or type array is null.</td></tr><tr><td><code>System.ArgumentException</code></td><td>Types or identifier are invalid, or the composite identifier is already registered.</td></tr><tr><td><code>System.InvalidOperationException</code></td><td>Called outside the editor main thread or the combined registration limit has been reached.</td></tr></tbody></table></div>
+<h3>備考</h3>
+<p>Every required condition must be present and enabled. Evaluations do not short-circuit; result selection stops at the first match and exposes only that result. Handler execution order is unspecified.</p>
+<h2>使用上の注意</h2>
+<p>登録時に実装の <code>Id</code> と、条件の <code>Changes</code> を読みます。そのgetterが投げた例外は呼び出し元へ伝播します。登録枠はgetterを呼ぶ前に予約し、失敗時に解放します。getter内の無限ループを強制停止する機構はありません。getterは定数相当の軽い処理にしてください。</p>
+<p>上限は条件プロバイダーの条件とイベントハンドラーの購読の合計100件です。無効・待機中の登録、進行中の登録予約も含みます。上限到達時はgetterを読まず拒否します。条件1件と、それを購読するハンドラ2件なら3枠を使用します。Dispose後の枠は再利用できます。</p>
+<p>型の継承や同じ名前による通知の互換扱いはありません。<code>IEventCondition&lt;BaseEvent&gt;</code> は <code>IEventHandler&lt;DerivedEvent&gt;</code> を起動しません。型とIDは別の概念で、型が配送先、IDがその登録の設定・失敗記録の識別子です。</p>
+<p>複合購読は1件につき1枠です。依存する条件プロバイダーもそれぞれ1枠を使います。通知型一覧は1〜100型で、null要素・重複型・void・参照渡し型・ポインター型・未確定のgeneric型・<code>CompositeEvent</code>を拒否します。通知型一覧は登録時にコピーし、後から渡した配列を編集しても購読の条件は変わりません。AND/ORの混在や入れ子、過去入力との結合は扱いません。単一条件は<code>Subscribe&lt;TEvent&gt;</code>で購読します。</p>
+<p>複合購読の通知型は <code>CompositeEvent</code> です。同じIDの複合購読は、モードや型一覧が異なっていても重複として拒否します。永続設定も <code>CompositeEvent</code> とIDで識別するため、解除後に条件構成だけを変えて同じIDで再登録すると設定を引き継ぎます。</p>
+<p>ハンドラーの実行順は公開契約に含めません。順序・優先度を指定する引数はありません。</p>
+<h2>関連資料</h2>
+<p><a href="#API_REFERENCE">API一覧</a> / <a href="#CONTRACTS">実行契約</a> / <a href="#HANDLER_AUTHORING">ハンドラーガイド</a> / <a href="#CONDITION_AUTHORING">条件ガイド</a></p></article>
+<article id="EditorObjectId" hidden><h1><code>EditorObjectId</code></h1>
+<ul><li>名前空間: <code>EditorEventHandlers.Editor</code></li><li>アセンブリ: <code>EditorEventHandlers.Editor</code></li><li>対象: Unity Editor</li></ul>
+<p>Unityのバージョン差を吸収する一時的なオブジェクト識別子です。</p>
+<h2>定義</h2>
+<pre><code>public readonly struct EditorObjectId : IEquatable&lt;EditorObjectId&gt;</code></pre>
+<p>Identities may be reused after destruction. Do not retain across Unity sessions or domains. Comparisons do not resolve objects.</p>
+<h2>メンバー一覧</h2>
+<div class="table-scroll"><table><thead><tr><th>メンバー</th><th>概要</th></tr></thead><tbody><tr><td><a href="#EditorObjectId/member-11181cc8ed0a">public bool IsValid { get; }</a></td><td>Whether this is a non-default identity; the object may already have been destroyed.</td></tr><tr><td><a href="#EditorObjectId/member-285913dd9269">public static EditorObjectId FromObject(UnityEngine.Object target)</a></td><td>Captures a live object&#x27;s identity on the editor main thread. Null or destroyed objects return default.</td></tr><tr><td><a href="#EditorObjectId/member-1af2b5a19510">public UnityEngine.Object Resolve()</a></td><td>Resolves the identity on the editor main thread. Returns null when it cannot be resolved.</td></tr><tr><td><a href="#EditorObjectId/member-2cfa42bfd42b">public bool Equals(EditorObjectId other)</a></td><td>Compares complete identities without resolving Unity objects; any thread may compare.</td></tr><tr><td><a href="#EditorObjectId/member-18e238138d9e">public override bool Equals(object obj)</a></td><td>Overrides System.Object.Equals(object).</td></tr><tr><td><a href="#EditorObjectId/member-54bf7150b4e2">public override int GetHashCode()</a></td><td>Hash for temporary collections; not a unique or persistent object identifier.</td></tr><tr><td><a href="#EditorObjectId/member-2f859b10fc4b">public static bool operator ==(EditorObjectId left, EditorObjectId right)</a></td><td>Compares identities for equality without resolving objects.</td></tr><tr><td><a href="#EditorObjectId/member-6dca5bfc42f1">public static bool operator !=(EditorObjectId left, EditorObjectId right)</a></td><td>Compares identities for inequality without resolving objects.</td></tr></tbody></table></div>
+<a id="member-11181cc8ed0a"></a>
+<h2><code>IsValid</code></h2>
+<pre><code>public bool IsValid { get; }</code></pre>
+<p>Whether this is a non-default identity; the object may already have been destroyed.</p>
+<a id="member-285913dd9269"></a>
+<h2><code>FromObject</code></h2>
+<pre><code>public static EditorObjectId FromObject(UnityEngine.Object target)</code></pre>
+<p>Captures a live object&#x27;s identity on the editor main thread. Null or destroyed objects return default.</p>
+<h3>引数</h3>
+<div class="table-scroll"><table><thead><tr><th>名前</th><th>説明</th></tr></thead><tbody><tr><td><code>target</code></td><td>Object to identify.</td></tr></tbody></table></div>
+<h3>戻り値</h3>
+<p>Temporary identity, or default for null or a destroyed object.</p>
+<h3>例外</h3>
+<div class="table-scroll"><table><thead><tr><th>型</th><th>発生条件</th></tr></thead><tbody><tr><td><code>System.InvalidOperationException</code></td><td>Called outside the editor main thread.</td></tr></tbody></table></div>
+<a id="member-1af2b5a19510"></a>
+<h2><code>Resolve</code></h2>
+<pre><code>public UnityEngine.Object Resolve()</code></pre>
+<p>Resolves the identity on the editor main thread. Returns null when it cannot be resolved.</p>
+<h3>戻り値</h3>
+<p>Current Unity object, or null for default or an unavailable identity.</p>
+<h3>例外</h3>
+<div class="table-scroll"><table><thead><tr><th>型</th><th>発生条件</th></tr></thead><tbody><tr><td><code>System.InvalidOperationException</code></td><td>Called outside the editor main thread.</td></tr></tbody></table></div>
+<a id="member-2cfa42bfd42b"></a>
+<h2><code>Equals</code></h2>
+<pre><code>public bool Equals(EditorObjectId other)</code></pre>
+<p>Compares complete identities without resolving Unity objects; any thread may compare.</p>
+<h3>引数</h3>
+<div class="table-scroll"><table><thead><tr><th>名前</th><th>説明</th></tr></thead><tbody><tr><td><code>other</code></td><td>Identity to compare.</td></tr></tbody></table></div>
+<h3>戻り値</h3>
+<p>Whether both identities are equal.</p>
+<a id="member-18e238138d9e"></a>
+<h2><code>Equals</code></h2>
+<pre><code>public override bool Equals(object obj)</code></pre>
+<p>System.Object.Equals(object)をオーバーライドし、同じ識別子かを比較します。</p>
+<a id="member-54bf7150b4e2"></a>
+<h2><code>GetHashCode</code></h2>
+<pre><code>public override int GetHashCode()</code></pre>
+<p>Hash for temporary collections; not a unique or persistent object identifier.</p>
+<a id="member-2f859b10fc4b"></a>
+<h2>op_Equality</h2>
+<pre><code>public static bool operator ==(EditorObjectId left, EditorObjectId right)</code></pre>
+<p>Compares identities for equality without resolving objects.</p>
+<a id="member-6dca5bfc42f1"></a>
+<h2>op_Inequality</h2>
+<pre><code>public static bool operator !=(EditorObjectId left, EditorObjectId right)</code></pre>
+<p>Compares identities for inequality without resolving objects.</p>
+<h2>使用上の注意</h2>
+<p><code>readonly struct : IEquatable&lt;EditorObjectId&gt;</code>。Unityのバージョン差を吸収する一時的なオブジェクト識別子です。生の数値、数値変換、シリアライズAPIは公開しません。</p>
+<p>IsValid・比較・hashにはメインスレッド制約はありません。Unityセッションやドメインをまたいで保存しないでください。破棄後に識別子が再利用される可能性もあるため、IsValidのみで参照の存続を判断しないでください。</p>
+<h2>使用例</h2>
+<p>次のコードは条件の<code>TryMatch</code>内に置く断片です。現在の対象と通知時の識別子・シーンを比較します。</p>
+<pre><code>var target = context.Change.GameObject;
+if (target == null)
+{
+    match = default;
+    return false;
+}
+bool sameObject = EditorObjectId.FromObject(target) == context.Change.ObjectId;
+bool sameScene = EditorSceneId.FromScene(target.scene) == context.Change.SceneId;</code></pre>
+<p>比較・hash・<code>IsValid</code>は対象を解決しません。現在の存続を調べる場合は<code>Resolve()</code>の結果を確認します。</p>
+<h2>関連資料</h2>
+<p><a href="#API_REFERENCE">API一覧</a> / <a href="#CONTRACTS">実行契約</a> / <a href="#HANDLER_AUTHORING">ハンドラーガイド</a> / <a href="#CONDITION_AUTHORING">条件ガイド</a></p></article>
+<article id="EditorSceneId" hidden><h1><code>EditorSceneId</code></h1>
+<ul><li>名前空間: <code>EditorEventHandlers.Editor</code></li><li>アセンブリ: <code>EditorEventHandlers.Editor</code></li><li>対象: Unity Editor</li></ul>
+<p>Unityのバージョン差を吸収する一時的なシーン識別子です。</p>
+<h2>定義</h2>
+<pre><code>public readonly struct EditorSceneId : IEquatable&lt;EditorSceneId&gt;</code></pre>
+<p>Do not persist across Unity sessions or domains. Comparisons do not check scene existence or loading.</p>
+<h2>メンバー一覧</h2>
+<div class="table-scroll"><table><thead><tr><th>メンバー</th><th>概要</th></tr></thead><tbody><tr><td><a href="#EditorSceneId/member-c16f2994c0cc">public bool IsValid { get; }</a></td><td>Whether this is a non-default identity; the scene may no longer exist or be loaded.</td></tr><tr><td><a href="#EditorSceneId/member-31afd7b80345">public static EditorSceneId FromScene(UnityEngine.SceneManagement.Scene scene)</a></td><td>Captures a scene&#x27;s identity on the editor main thread. Invalid scenes return default.</td></tr><tr><td><a href="#EditorSceneId/member-002f54545c97">public bool Equals(EditorSceneId other)</a></td><td>Compares complete identities without checking scene loading; any thread may compare.</td></tr><tr><td><a href="#EditorSceneId/member-c8ee11ffdb9d">public override bool Equals(object obj)</a></td><td>Overrides System.Object.Equals(object).</td></tr><tr><td><a href="#EditorSceneId/member-497956f98383">public override int GetHashCode()</a></td><td>Hash for temporary collections; not a unique or persistent scene identifier.</td></tr><tr><td><a href="#EditorSceneId/member-7c888896ea70">public static bool operator ==(EditorSceneId left, EditorSceneId right)</a></td><td>Compares identities for equality without checking scene existence or loading.</td></tr><tr><td><a href="#EditorSceneId/member-0b5ae3601b50">public static bool operator !=(EditorSceneId left, EditorSceneId right)</a></td><td>Compares identities for inequality without checking scene existence or loading.</td></tr></tbody></table></div>
+<a id="member-c16f2994c0cc"></a>
+<h2><code>IsValid</code></h2>
+<pre><code>public bool IsValid { get; }</code></pre>
+<p>Whether this is a non-default identity; the scene may no longer exist or be loaded.</p>
+<a id="member-31afd7b80345"></a>
+<h2><code>FromScene</code></h2>
+<pre><code>public static EditorSceneId FromScene(UnityEngine.SceneManagement.Scene scene)</code></pre>
+<p>Captures a scene&#x27;s identity on the editor main thread. Invalid scenes return default.</p>
+<h3>引数</h3>
+<div class="table-scroll"><table><thead><tr><th>名前</th><th>説明</th></tr></thead><tbody><tr><td><code>scene</code></td><td>Scene to identify.</td></tr></tbody></table></div>
+<h3>戻り値</h3>
+<p>Temporary identity, or default for an invalid scene.</p>
+<h3>例外</h3>
+<div class="table-scroll"><table><thead><tr><th>型</th><th>発生条件</th></tr></thead><tbody><tr><td><code>System.InvalidOperationException</code></td><td>Called outside the editor main thread.</td></tr></tbody></table></div>
+<a id="member-002f54545c97"></a>
+<h2><code>Equals</code></h2>
+<pre><code>public bool Equals(EditorSceneId other)</code></pre>
+<p>Compares complete identities without checking scene loading; any thread may compare.</p>
+<h3>引数</h3>
+<div class="table-scroll"><table><thead><tr><th>名前</th><th>説明</th></tr></thead><tbody><tr><td><code>other</code></td><td>Identity to compare.</td></tr></tbody></table></div>
+<h3>戻り値</h3>
+<p>Whether both identities are equal.</p>
+<a id="member-c8ee11ffdb9d"></a>
+<h2><code>Equals</code></h2>
+<pre><code>public override bool Equals(object obj)</code></pre>
+<p>System.Object.Equals(object)をオーバーライドし、同じ識別子かを比較します。</p>
+<a id="member-497956f98383"></a>
+<h2><code>GetHashCode</code></h2>
+<pre><code>public override int GetHashCode()</code></pre>
+<p>Hash for temporary collections; not a unique or persistent scene identifier.</p>
+<a id="member-7c888896ea70"></a>
+<h2>op_Equality</h2>
+<pre><code>public static bool operator ==(EditorSceneId left, EditorSceneId right)</code></pre>
+<p>Compares identities for equality without checking scene existence or loading.</p>
+<a id="member-0b5ae3601b50"></a>
+<h2>op_Inequality</h2>
+<pre><code>public static bool operator !=(EditorSceneId left, EditorSceneId right)</code></pre>
+<p>Compares identities for inequality without checking scene existence or loading.</p>
+<h2>使用上の注意</h2>
+<p><code>readonly struct : IEquatable&lt;EditorSceneId&gt;</code>。一時的なシーン識別子です。</p>
+<p>Resolveや生のhandleを読むAPIはありません。IsValid・比較・hashにはメインスレッド制約はありません。永続保存には使用しません。</p>
+<h2>関連資料</h2>
+<p><a href="#API_REFERENCE">API一覧</a> / <a href="#CONTRACTS">実行契約</a> / <a href="#HANDLER_AUTHORING">ハンドラーガイド</a> / <a href="#CONDITION_AUTHORING">条件ガイド</a></p></article>
+<article id="EventSubscription" hidden><h1><code>EventSubscription</code></h1>
+<ul><li>名前空間: <code>EditorEventHandlers.Editor</code></li><li>アセンブリ: <code>EditorEventHandlers.Editor</code></li><li>対象: Unity Editor</li></ul>
+<p>購読の状態・直近結果・解除トークンです。</p>
+<h2>定義</h2>
+<pre><code>public sealed class EventSubscription : IDisposable</code></pre>
+<p>公開コンストラクターはありません。</p>
+<h2>メンバー一覧</h2>
+<div class="table-scroll"><table><thead><tr><th>メンバー</th><th>概要</th></tr></thead><tbody><tr><td><a href="#EventSubscription/member-1bb8bf4ed03d">public string Id { get; }</a></td><td>Identifier captured at registration.</td></tr><tr><td><a href="#EventSubscription/member-ad6c4d89651d">public Type EventType { get; }</a></td><td>Handler payload type; CompositeEvent for an All or Any subscription.</td></tr><tr><td><a href="#EventSubscription/member-2a926cc77565">public SubscriptionMode Mode { get; }</a></td><td>Combination mode captured at registration.</td></tr><tr><td><a href="#EventSubscription/member-27f4f9333f99">public IReadOnlyList&lt;Type&gt; ConditionTypes { get; }</a></td><td>Immutable condition notification types, in declaration order.</td></tr><tr><td><a href="#EventSubscription/member-856f94e40421">public TimeSpan TimeLimit { get; }</a></td><td>Current user-configured limit; each invocation captures its starting value.</td></tr><tr><td><a href="#EventSubscription/member-df1809a6b779">public bool IsDisposed { get; }</a></td><td>Whether the subscription has been explicitly removed.</td></tr><tr><td><a href="#EventSubscription/member-336e62e8fb71">public bool IsEnabled { get; }</a></td><td>Whether user settings and fault policy currently enable the subscription.</td></tr><tr><td><a href="#EventSubscription/member-68eeaaf5b414">public bool IsActive { get; }</a></td><td>Whether enabled, not disposed, and backed by every required active condition. Read on the editor main thread.</td></tr><tr><td><a href="#EventSubscription/member-b64ca99fd124">public string DisabledReason { get; }</a></td><td>Reason for disabling; initially empty for an enabled subscription.</td></tr><tr><td><a href="#EventSubscription/member-9aba67b54815">public HandlerResult LastResult { get; }</a></td><td>Most recent completion result; Unspecified before the first invocation.</td></tr><tr><td><a href="#EventSubscription/member-ea8f72146cc0">public TimeSpan LastDuration { get; }</a></td><td>Most recent invocation duration, excluding transaction finalization; zero before first use.</td></tr><tr><td><a href="#EventSubscription/member-f6917fdae8ca">public void Dispose()</a></td><td>Removes this subscription and releases its registration slot; repeated calls do nothing.</td></tr></tbody></table></div>
+<a id="member-1bb8bf4ed03d"></a>
+<h2><code>Id</code></h2>
+<pre><code>public string Id { get; }</code></pre>
+<p>Identifier captured at registration.</p>
+<a id="member-ad6c4d89651d"></a>
+<h2><code>EventType</code></h2>
+<pre><code>public Type EventType { get; }</code></pre>
+<p>Handler payload type; CompositeEvent for an All or Any subscription.</p>
+<a id="member-2a926cc77565"></a>
+<h2><code>Mode</code></h2>
+<pre><code>public SubscriptionMode Mode { get; }</code></pre>
+<p>Combination mode captured at registration.</p>
+<a id="member-27f4f9333f99"></a>
+<h2><code>ConditionTypes</code></h2>
+<pre><code>public IReadOnlyList&lt;Type&gt; ConditionTypes { get; }</code></pre>
+<p>Immutable condition notification types, in declaration order.</p>
+<a id="member-856f94e40421"></a>
+<h2><code>TimeLimit</code></h2>
+<pre><code>public TimeSpan TimeLimit { get; }</code></pre>
+<p>Current user-configured limit; each invocation captures its starting value.</p>
+<a id="member-df1809a6b779"></a>
+<h2><code>IsDisposed</code></h2>
+<pre><code>public bool IsDisposed { get; }</code></pre>
+<p>Whether the subscription has been explicitly removed.</p>
+<a id="member-336e62e8fb71"></a>
+<h2><code>IsEnabled</code></h2>
+<pre><code>public bool IsEnabled { get; }</code></pre>
+<p>Whether user settings and fault policy currently enable the subscription.</p>
+<a id="member-68eeaaf5b414"></a>
+<h2><code>IsActive</code></h2>
+<pre><code>public bool IsActive { get; }</code></pre>
+<p>Whether enabled, not disposed, and backed by every required active condition. Read on the editor main thread.</p>
+<a id="member-b64ca99fd124"></a>
+<h2><code>DisabledReason</code></h2>
+<pre><code>public string DisabledReason { get; }</code></pre>
+<p>Reason for disabling; initially empty for an enabled subscription.</p>
+<a id="member-9aba67b54815"></a>
+<h2><code>LastResult</code></h2>
+<pre><code>public HandlerResult LastResult { get; }</code></pre>
+<p>Most recent completion result; Unspecified before the first invocation.</p>
+<a id="member-ea8f72146cc0"></a>
+<h2><code>LastDuration</code></h2>
+<pre><code>public TimeSpan LastDuration { get; }</code></pre>
+<p>Most recent invocation duration, excluding transaction finalization; zero before first use.</p>
+<a id="member-f6917fdae8ca"></a>
+<h2><code>Dispose</code></h2>
+<pre><code>public void Dispose()</code></pre>
+<p>Removes this subscription and releases its registration slot; repeated calls do nothing.</p>
+<h3>例外</h3>
+<div class="table-scroll"><table><thead><tr><th>型</th><th>発生条件</th></tr></thead><tbody><tr><td><code>System.InvalidOperationException</code></td><td>Called outside the editor main thread.</td></tr></tbody></table></div>
+<h2>使用上の注意</h2>
+<p>公開コンストラクターはありません。</p>
+<p><code>void Dispose()</code> は購読を解除し枠を解放します。メインスレッド専用、別スレッドならInvalidOperationException、再Disposeは何もしません。</p>
+<p>管理側が実装と登録を強参照します。トークンを手放しただけでは解除されません。登録はEditorドメイン内の寿命を持ち、InitializeOnLoad等で必要に応じて再登録します。バッチ開始時の登録構成で評価し、新規登録は次バッチから対象です。解除・無効化は後続処理へ反映します。依存条件が解除・無効化・別登録に置き換えられた場合、その条件の保存済み結果は使用しません。Anyでも未選択の依存条件の失効は当該配送を止めます。過去通知は再送しません。</p>
+<h2>関連資料</h2>
+<p><a href="#API_REFERENCE">API一覧</a> / <a href="#CONTRACTS">実行契約</a> / <a href="#HANDLER_AUTHORING">ハンドラーガイド</a> / <a href="#CONDITION_AUTHORING">条件ガイド</a></p></article>
+<article id="HandlerContext-1" hidden><h1><code>HandlerContext&lt;TEvent&gt;</code></h1>
+<ul><li>名前空間: <code>EditorEventHandlers.Editor</code></li><li>アセンブリ: <code>EditorEventHandlers.Editor</code></li><li>対象: Unity Editor</li></ul>
+<p>型付き通知と、基底型から継承する編集APIです。</p>
+<h2>定義</h2>
+<pre><code>public sealed class HandlerContext&lt;TEvent&gt; : HandlerContext</code></pre>
+<p>基底型: <a href="#HandlerContext">HandlerContext</a>。編集API・期限・Rootは基底型から継承します。</p>
+<p>公開コンストラクターはありません。</p>
+<h2>メンバー一覧</h2>
+<div class="table-scroll"><table><thead><tr><th>メンバー</th><th>概要</th></tr></thead><tbody><tr><td><a href="#HandlerContext-1/member-117f893247d0">public TEvent Event { get; }</a></td><td>Condition result shared with subscribers; Unity references are for inspection.</td></tr></tbody></table></div>
+<a id="member-117f893247d0"></a>
+<h2><code>Event</code></h2>
+<pre><code>public TEvent Event { get; }</code></pre>
+<p>Condition result shared with subscribers; Unity references are for inspection.</p>
+<h2>使用上の注意</h2>
+<p><code>Event</code>は条件が生成した型付き通知です。通知値は他の購読者と共有し、含まれるUnity参照は現在状態を指します。使用前に必要な存続・階層・Mesh等を確認してください。</p>
+<p>編集API・Root・期限は<a href="#HandlerContext">HandlerContext</a>から継承します。判定終了後の通知を完全な状態コピーとして扱わず、コンテキストは実行後に再利用しません。</p>
+<h2>関連資料</h2>
+<p><a href="#API_REFERENCE">API一覧</a> / <a href="#CONTRACTS">実行契約</a> / <a href="#HANDLER_AUTHORING">ハンドラーガイド</a> / <a href="#CONDITION_AUTHORING">条件ガイド</a></p></article>
+<article id="HandlerContext" hidden><h1><code>HandlerContext</code></h1>
+<ul><li>名前空間: <code>EditorEventHandlers.Editor</code></li><li>アセンブリ: <code>EditorEventHandlers.Editor</code></li><li>対象: Unity Editor</li></ul>
+<p>期限の確認・編集範囲・Undo対応の編集APIです。</p>
+<h2>定義</h2>
+<pre><code>public abstract class HandlerContext</code></pre>
+<p>Do not reuse after execution, perform direct Unity writes, or use delayed edits. Tracked Undo is not a full hierarchy snapshot. Unity and edit-action exceptions can propagate.</p>
+<p>公開コンストラクターはありません。</p>
+<h2>メンバー一覧</h2>
+<div class="table-scroll"><table><thead><tr><th>メンバー</th><th>概要</th></tr></thead><tbody><tr><td><a href="#HandlerContext/member-ede288ee2642">public GameObject Root { get; }</a></td><td>Condition-selected root of the editable scene hierarchy; inspect it and use context methods for edits.</td></tr><tr><td><a href="#HandlerContext/member-e1ec18c3ad2d">public TimeSpan TimeLimit { get; }</a></td><td>Independent execution limit captured at invocation start.</td></tr><tr><td><a href="#HandlerContext/member-35985a8812d5">public TimeSpan Elapsed { get; }</a></td><td>Time elapsed since context creation; reading it does not extend the deadline.</td></tr><tr><td><a href="#HandlerContext/member-1c4cd4889a28">public void CheckDeadline()</a></td><td>Checks the editor thread, invocation lifetime, and cooperative deadline.</td></tr><tr><td><a href="#HandlerContext/member-e5937470cfda">public Component AddComponent(GameObject target, Type componentType)</a></td><td>Adds an Undo-tracked Component to a GameObject in the editable hierarchy.</td></tr><tr><td><a href="#HandlerContext/member-0e3f39ab69cd">public T AddComponent&lt;T&gt;(GameObject target) where T : Component</a></td><td>Adds an Undo-tracked Component of the specified type to the editable hierarchy.</td></tr><tr><td><a href="#HandlerContext/member-0385478dd0c3">public void Modify(UnityEngine.Object target, Action edit)</a></td><td>Records a scoped GameObject or Component, then synchronously edits its serializable properties.</td></tr><tr><td><a href="#HandlerContext/member-63974b68e1e3">public GameObject CreateChild(string name, GameObject parent = null)</a></td><td>Creates an Undo-tracked GameObject as a child in the editable scene hierarchy.</td></tr><tr><td><a href="#HandlerContext/member-4f8ca8cdf6f8">public GameObject InstantiatePrefab(GameObject prefab, GameObject parent = null)</a></td><td>Instantiates a Prefab asset as an Undo-tracked child in Root&#x27;s scene.</td></tr><tr><td><a href="#HandlerContext/member-045592dcbb96">public void SetParent(GameObject child, GameObject parent)</a></td><td>Reparents an Undo-tracked descendant within the editable hierarchy.</td></tr><tr><td><a href="#HandlerContext/member-b972d4f48498">public void Destroy(UnityEngine.Object target)</a></td><td>Destroys an Undo-tracked child GameObject or allowed Component within the editable hierarchy.</td></tr></tbody></table></div>
+<a id="member-ede288ee2642"></a>
+<h2><code>Root</code></h2>
+<pre><code>public GameObject Root { get; }</code></pre>
+<p>Condition-selected root of the editable scene hierarchy; inspect it and use context methods for edits.</p>
+<a id="member-e1ec18c3ad2d"></a>
+<h2><code>TimeLimit</code></h2>
+<pre><code>public TimeSpan TimeLimit { get; }</code></pre>
+<p>Independent execution limit captured at invocation start.</p>
+<a id="member-35985a8812d5"></a>
+<h2><code>Elapsed</code></h2>
+<pre><code>public TimeSpan Elapsed { get; }</code></pre>
+<p>Time elapsed since context creation; reading it does not extend the deadline.</p>
+<a id="member-1c4cd4889a28"></a>
+<h2><code>CheckDeadline</code></h2>
+<pre><code>public void CheckDeadline()</code></pre>
+<p>Checks the editor thread, invocation lifetime, and cooperative deadline.</p>
+<h3>例外</h3>
+<div class="table-scroll"><table><thead><tr><th>型</th><th>発生条件</th></tr></thead><tbody><tr><td><code>System.InvalidOperationException</code></td><td>Called outside the editor main thread or after the invocation ended.</td></tr><tr><td><code>EditorEventHandlers.Editor.HandlerDeadlineExceededException</code></td><td>Elapsed time has reached the execution limit.</td></tr></tbody></table></div>
+<a id="member-e5937470cfda"></a>
+<h2><code>AddComponent</code></h2>
+<pre><code>public Component AddComponent(GameObject target, Type componentType)</code></pre>
+<p>Adds an Undo-tracked Component to a GameObject in the editable hierarchy.</p>
+<h3>引数</h3>
+<div class="table-scroll"><table><thead><tr><th>名前</th><th>説明</th></tr></thead><tbody><tr><td><code>target</code></td><td>Root or a descendant in the same scene.</td></tr><tr><td><code>componentType</code></td><td>Type derived from Component.</td></tr></tbody></table></div>
+<h3>戻り値</h3>
+<p>The added Component.</p>
+<h3>例外</h3>
+<div class="table-scroll"><table><thead><tr><th>型</th><th>発生条件</th></tr></thead><tbody><tr><td><code>System.ArgumentException</code></td><td>The target is outside the scope or the type is not a Component type.</td></tr><tr><td><code>System.InvalidOperationException</code></td><td>Wrong thread, ended invocation, lost Root, or Unity could not add the Component.</td></tr><tr><td><code>EditorEventHandlers.Editor.HandlerDeadlineExceededException</code></td><td>The invocation deadline is reached before or after editing.</td></tr></tbody></table></div>
+<a id="member-0e3f39ab69cd"></a>
+<h2><code>AddComponent&lt;T&gt;</code></h2>
+<pre><code>public T AddComponent&lt;T&gt;(GameObject target) where T : Component</code></pre>
+<p>Adds an Undo-tracked Component of the specified type to the editable hierarchy.</p>
+<h3>型パラメーター</h3>
+<div class="table-scroll"><table><thead><tr><th>名前</th><th>説明</th></tr></thead><tbody><tr><td><code>T</code></td><td>Component type to add.</td></tr></tbody></table></div>
+<h3>引数</h3>
+<div class="table-scroll"><table><thead><tr><th>名前</th><th>説明</th></tr></thead><tbody><tr><td><code>target</code></td><td>Root or a descendant in the same scene.</td></tr></tbody></table></div>
+<h3>戻り値</h3>
+<p>The added typed Component.</p>
+<h3>例外</h3>
+<div class="table-scroll"><table><thead><tr><th>型</th><th>発生条件</th></tr></thead><tbody><tr><td><code>System.ArgumentException</code></td><td>The target is outside the editable scope.</td></tr><tr><td><code>System.InvalidOperationException</code></td><td>Wrong thread, ended invocation, lost Root, or Unity could not add the Component.</td></tr><tr><td><code>EditorEventHandlers.Editor.HandlerDeadlineExceededException</code></td><td>The invocation deadline is reached before or after editing.</td></tr></tbody></table></div>
+<a id="member-0385478dd0c3"></a>
+<h2><code>Modify</code></h2>
+<pre><code>public void Modify(UnityEngine.Object target, Action edit)</code></pre>
+<p>Records a scoped GameObject or Component, then synchronously edits its serializable properties.</p>
+<h3>引数</h3>
+<div class="table-scroll"><table><thead><tr><th>名前</th><th>説明</th></tr></thead><tbody><tr><td><code>target</code></td><td>Object whose properties are recorded and edited.</td></tr><tr><td><code>edit</code></td><td>Action that edits only this target&#x27;s properties.</td></tr></tbody></table></div>
+<h3>例外</h3>
+<div class="table-scroll"><table><thead><tr><th>型</th><th>発生条件</th></tr></thead><tbody><tr><td><code>System.ArgumentException</code></td><td>The target is not a scene GameObject or Component within the scope.</td></tr><tr><td><code>System.ArgumentNullException</code></td><td>The edit action is null.</td></tr><tr><td><code>System.InvalidOperationException</code></td><td>Wrong thread, ended invocation, or lost Root.</td></tr><tr><td><code>EditorEventHandlers.Editor.HandlerDeadlineExceededException</code></td><td>The invocation deadline is reached before or after editing.</td></tr></tbody></table></div>
+<h3>備考</h3>
+<p>Use the dedicated context methods for creation, destruction, and parenting. Other objects require separate Modify calls.</p>
+<a id="member-63974b68e1e3"></a>
+<h2><code>CreateChild</code></h2>
+<pre><code>public GameObject CreateChild(string name, GameObject parent = null)</code></pre>
+<p>Creates an Undo-tracked GameObject as a child in the editable scene hierarchy.</p>
+<h3>引数</h3>
+<div class="table-scroll"><table><thead><tr><th>名前</th><th>説明</th></tr></thead><tbody><tr><td><code>name</code></td><td>Name passed to the new GameObject.</td></tr><tr><td><code>parent</code></td><td>Root or a descendant; null uses Root.</td></tr></tbody></table></div>
+<h3>戻り値</h3>
+<p>The created child.</p>
+<h3>例外</h3>
+<div class="table-scroll"><table><thead><tr><th>型</th><th>発生条件</th></tr></thead><tbody><tr><td><code>System.ArgumentException</code></td><td>The parent is outside the editable scope.</td></tr><tr><td><code>System.InvalidOperationException</code></td><td>Wrong thread, ended invocation, or lost Root.</td></tr><tr><td><code>EditorEventHandlers.Editor.HandlerDeadlineExceededException</code></td><td>The invocation deadline is reached before or after editing.</td></tr></tbody></table></div>
+<a id="member-4f8ca8cdf6f8"></a>
+<h2><code>InstantiatePrefab</code></h2>
+<pre><code>public GameObject InstantiatePrefab(GameObject prefab, GameObject parent = null)</code></pre>
+<p>Instantiates a Prefab asset as an Undo-tracked child in Root&#x27;s scene.</p>
+<h3>引数</h3>
+<div class="table-scroll"><table><thead><tr><th>名前</th><th>説明</th></tr></thead><tbody><tr><td><code>prefab</code></td><td>Prefab asset to instantiate.</td></tr><tr><td><code>parent</code></td><td>Root or a descendant; null uses Root.</td></tr></tbody></table></div>
+<h3>戻り値</h3>
+<p>The created Prefab instance.</p>
+<h3>例外</h3>
+<div class="table-scroll"><table><thead><tr><th>型</th><th>発生条件</th></tr></thead><tbody><tr><td><code>System.ArgumentException</code></td><td>The input is not a Prefab asset or the parent is outside the editable scope.</td></tr><tr><td><code>System.InvalidOperationException</code></td><td>Wrong thread, ended invocation, or lost Root.</td></tr><tr><td><code>EditorEventHandlers.Editor.HandlerDeadlineExceededException</code></td><td>The invocation deadline is reached before or after editing.</td></tr></tbody></table></div>
+<a id="member-045592dcbb96"></a>
+<h2><code>SetParent</code></h2>
+<pre><code>public void SetParent(GameObject child, GameObject parent)</code></pre>
+<p>Reparents an Undo-tracked descendant within the editable hierarchy.</p>
+<h3>引数</h3>
+<div class="table-scroll"><table><thead><tr><th>名前</th><th>説明</th></tr></thead><tbody><tr><td><code>child</code></td><td>Descendant to move; cannot be Root.</td></tr><tr><td><code>parent</code></td><td>Root or another descendant; cannot create a parenting cycle.</td></tr></tbody></table></div>
+<h3>例外</h3>
+<div class="table-scroll"><table><thead><tr><th>型</th><th>発生条件</th></tr></thead><tbody><tr><td><code>System.ArgumentException</code></td><td>An object is outside the scope, child is Root, or parenting would create a cycle.</td></tr><tr><td><code>System.InvalidOperationException</code></td><td>Wrong thread, ended invocation, or lost Root.</td></tr><tr><td><code>EditorEventHandlers.Editor.HandlerDeadlineExceededException</code></td><td>The invocation deadline is reached before or after editing.</td></tr></tbody></table></div>
+<a id="member-b972d4f48498"></a>
+<h2><code>Destroy</code></h2>
+<pre><code>public void Destroy(UnityEngine.Object target)</code></pre>
+<p>Destroys an Undo-tracked child GameObject or allowed Component within the editable hierarchy.</p>
+<h3>引数</h3>
+<div class="table-scroll"><table><thead><tr><th>名前</th><th>説明</th></tr></thead><tbody><tr><td><code>target</code></td><td>Descendant GameObject or Component; Root and Transform components cannot be destroyed.</td></tr></tbody></table></div>
+<h3>例外</h3>
+<div class="table-scroll"><table><thead><tr><th>型</th><th>発生条件</th></tr></thead><tbody><tr><td><code>System.ArgumentException</code></td><td>The target is outside the scope, Root, or a Transform.</td></tr><tr><td><code>System.InvalidOperationException</code></td><td>Wrong thread, ended invocation, or lost Root.</td></tr><tr><td><code>EditorEventHandlers.Editor.HandlerDeadlineExceededException</code></td><td>The invocation deadline is reached before or after editing.</td></tr></tbody></table></div>
+<h2>使用上の注意</h2>
+<p>基底はabstract class、generic型はsealed classです。公開コンストラクターはなく、外部で継承・生成するための入口ではありません。generic型は以下の全APIに加え <code>TEvent Event</code> を提供します。</p>
+<p>対象はRootまたはその子階層のGameObject/Componentで、Rootと同じシーンにあり、永続アセットではない必要があります。Modifyのeditは記録したtargetのプロパティだけを変更し、作成・削除・親変更には専用APIを使います。別オブジェクトも変更する場合は個別にModifyしてください。</p>
+<p>主な例外は以下です。管理側がExecute中の例外を結果へ変換し、追跡済み変更を復元します。</p>
+<p>対象の破棄状態によってはUnity由来のMissingReferenceException等が発生します。特定のUnityエラーをすべて固定の例外型へ正規化するAPIではありません。</p>
+<h2>関連資料</h2>
+<p><a href="#API_REFERENCE">API一覧</a> / <a href="#CONTRACTS">実行契約</a> / <a href="#HANDLER_AUTHORING">ハンドラーガイド</a> / <a href="#CONDITION_AUTHORING">条件ガイド</a></p></article>
+<article id="HandlerDeadlineExceededException" hidden><h1><code>HandlerDeadlineExceededException</code></h1>
+<ul><li>名前空間: <code>EditorEventHandlers.Editor</code></li><li>アセンブリ: <code>EditorEventHandlers.Editor</code></li><li>対象: Unity Editor</li></ul>
+<p>ハンドラーの協調的な期限超過です。</p>
+<h2>定義</h2>
+<pre><code>public sealed class HandlerDeadlineExceededException : TimeoutException</code></pre>
+<p>公開コンストラクターはありません。</p>
+<h2>メンバー一覧</h2>
+<p>追加の公開メンバーはありません。<code>TimeoutException</code>から基本例外のメンバーを継承します。</p>
+<h2>関連資料</h2>
+<p><a href="#API_REFERENCE">API一覧</a> / <a href="#CONTRACTS">実行契約</a> / <a href="#HANDLER_AUTHORING">ハンドラーガイド</a> / <a href="#CONDITION_AUTHORING">条件ガイド</a></p></article>
+<article id="HandlerResult" hidden><h1><code>HandlerResult</code></h1>
+<ul><li>名前空間: <code>EditorEventHandlers.Editor</code></li><li>アセンブリ: <code>EditorEventHandlers.Editor</code></li><li>対象: Unity Editor</li></ul>
+<p>成功・スキップ・失敗・キャンセルの終了結果です。</p>
+<h2>定義</h2>
+<pre><code>public readonly struct HandlerResult</code></pre>
+<h2>メンバー一覧</h2>
+<div class="table-scroll"><table><thead><tr><th>メンバー</th><th>概要</th></tr></thead><tbody><tr><td><a href="#HandlerResult/member-03c844cc7f93">public HandlerStatus Status { get; }</a></td><td>Explicit completion state; the default value is Unspecified.</td></tr><tr><td><a href="#HandlerResult/member-c9c6eea44821">public string Message { get; }</a></td><td>Optional explanation; factory methods normalize null to an empty string.</td></tr><tr><td><a href="#HandlerResult/member-913735074221">public static HandlerResult Success()</a></td><td>Reports successful completion. Tracked edits are committed if all execution checks pass.</td></tr><tr><td><a href="#HandlerResult/member-7c9e0dd7a368">public static HandlerResult Skip(string reason = null)</a></td><td>Reports no work. A skip after tracked edits is treated as failure.</td></tr><tr><td><a href="#HandlerResult/member-63096106b7e3">public static HandlerResult Failure(string reason)</a></td><td>Reports failure; the dispatcher attempts tracked rollback and disables the subscription.</td></tr><tr><td><a href="#HandlerResult/member-69cac07e885f">public static HandlerResult Cancel(string reason = null)</a></td><td>Reports cancellation; the dispatcher attempts tracked rollback and disables the subscription.</td></tr></tbody></table></div>
+<a id="member-03c844cc7f93"></a>
+<h2><code>Status</code></h2>
+<pre><code>public HandlerStatus Status { get; }</code></pre>
+<p>Explicit completion state; the default value is Unspecified.</p>
+<a id="member-c9c6eea44821"></a>
+<h2><code>Message</code></h2>
+<pre><code>public string Message { get; }</code></pre>
+<p>Optional explanation; factory methods normalize null to an empty string.</p>
+<a id="member-913735074221"></a>
+<h2><code>Success</code></h2>
+<pre><code>public static HandlerResult Success()</code></pre>
+<p>Reports successful completion. Tracked edits are committed if all execution checks pass.</p>
+<h3>戻り値</h3>
+<p>A successful result.</p>
+<a id="member-7c9e0dd7a368"></a>
+<h2><code>Skip</code></h2>
+<pre><code>public static HandlerResult Skip(string reason = null)</code></pre>
+<p>Reports no work. A skip after tracked edits is treated as failure.</p>
+<h3>引数</h3>
+<div class="table-scroll"><table><thead><tr><th>名前</th><th>説明</th></tr></thead><tbody><tr><td><code>reason</code></td><td>Optional explanation.</td></tr></tbody></table></div>
+<h3>戻り値</h3>
+<p>A skipped result.</p>
+<a id="member-63096106b7e3"></a>
+<h2><code>Failure</code></h2>
+<pre><code>public static HandlerResult Failure(string reason)</code></pre>
+<p>Reports failure; the dispatcher attempts tracked rollback and disables the subscription.</p>
+<h3>引数</h3>
+<div class="table-scroll"><table><thead><tr><th>名前</th><th>説明</th></tr></thead><tbody><tr><td><code>reason</code></td><td>Failure explanation; null becomes an empty string.</td></tr></tbody></table></div>
+<h3>戻り値</h3>
+<p>A failed result.</p>
+<a id="member-69cac07e885f"></a>
+<h2><code>Cancel</code></h2>
+<pre><code>public static HandlerResult Cancel(string reason = null)</code></pre>
+<p>Reports cancellation; the dispatcher attempts tracked rollback and disables the subscription.</p>
+<h3>引数</h3>
+<div class="table-scroll"><table><thead><tr><th>名前</th><th>説明</th></tr></thead><tbody><tr><td><code>reason</code></td><td>Optional explanation.</td></tr></tbody></table></div>
+<h3>戻り値</h3>
+<p>A cancelled result.</p>
+<h2>使用上の注意</h2>
+<p>HandlerStatusは <code>Unspecified = 0, Succeeded = 1, Skipped = 2, Failed = 3, Cancelled = 4</code> です。HandlerResultはreadonly structで、公開プロパティは <code>HandlerStatus Status</code>、<code>string Message</code> です。各factoryでnullの理由は空文字へ変換します。</p>
+<p>ハンドラの例外・期限超過はFailureへ変換し、<code>OperationCanceledException</code> はCancelledへ変換します。復元が成功すれば次の購読を実行できます。復元・確定の例外、または実行後のRoot喪失では全体を即時停止します。</p>
+<p>Successを返しても、実行後にRootが失われていればLastResultをFailureへ変更し、そのイベントハンドラーを異常無効として保存します。Context外で破壊されたRootの復元を意味しません。</p>
+<h2>関連資料</h2>
+<p><a href="#API_REFERENCE">API一覧</a> / <a href="#CONTRACTS">実行契約</a> / <a href="#HANDLER_AUTHORING">ハンドラーガイド</a> / <a href="#CONDITION_AUTHORING">条件ガイド</a></p></article>
+<article id="HandlerStatus" hidden><h1><code>HandlerStatus</code></h1>
+<ul><li>名前空間: <code>EditorEventHandlers.Editor</code></li><li>アセンブリ: <code>EditorEventHandlers.Editor</code></li><li>対象: Unity Editor</li></ul>
+<p>ハンドラーの終了状態です。</p>
+<h2>定義</h2>
+<pre><code>public enum HandlerStatus</code></pre>
+<h2>メンバー一覧</h2>
+<div class="table-scroll"><table><thead><tr><th>メンバー</th><th>概要</th></tr></thead><tbody><tr><td><a href="#HandlerStatus/member-80f6130a2fd4">Unspecified</a></td><td>No explicit completion was reported.</td></tr><tr><td><a href="#HandlerStatus/member-1230b83d04d0">Succeeded</a></td><td>The handler completed successfully.</td></tr><tr><td><a href="#HandlerStatus/member-b7ea9828303d">Skipped</a></td><td>The handler declined the notification without tracked edits.</td></tr><tr><td><a href="#HandlerStatus/member-e23fa635deb3">Failed</a></td><td>The handler failed; tracked edits are subject to rollback.</td></tr><tr><td><a href="#HandlerStatus/member-210c14ad8134">Cancelled</a></td><td>The handler cancelled; tracked edits are subject to rollback.</td></tr></tbody></table></div>
+<a id="member-80f6130a2fd4"></a>
+<h2><code>Unspecified</code></h2>
+<pre><code>Unspecified</code></pre>
+<p>No explicit completion was reported.</p>
+<a id="member-1230b83d04d0"></a>
+<h2><code>Succeeded</code></h2>
+<pre><code>Succeeded</code></pre>
+<p>The handler completed successfully.</p>
+<a id="member-b7ea9828303d"></a>
+<h2><code>Skipped</code></h2>
+<pre><code>Skipped</code></pre>
+<p>The handler declined the notification without tracked edits.</p>
+<a id="member-e23fa635deb3"></a>
+<h2><code>Failed</code></h2>
+<pre><code>Failed</code></pre>
+<p>The handler failed; tracked edits are subject to rollback.</p>
+<a id="member-210c14ad8134"></a>
+<h2><code>Cancelled</code></h2>
+<pre><code>Cancelled</code></pre>
+<p>The handler cancelled; tracked edits are subject to rollback.</p>
+<h2>使用上の注意</h2>
+<p><code>Unspecified = 0</code>、<code>Succeeded = 1</code>、<code>Skipped = 2</code>、<code>Failed = 3</code>、<code>Cancelled = 4</code>です。ハンドラーは<a href="#HandlerResult">HandlerResult</a>のfactoryで明示的な結果を返します。defaultまたは不正な値は失敗として扱います。</p>
+<h2>関連資料</h2>
+<p><a href="#API_REFERENCE">API一覧</a> / <a href="#CONTRACTS">実行契約</a> / <a href="#HANDLER_AUTHORING">ハンドラーガイド</a> / <a href="#CONDITION_AUTHORING">条件ガイド</a></p></article>
+<article id="IEventCondition-1" hidden><h1><code>IEventCondition&lt;TEvent&gt;</code></h1>
+<ul><li>名前空間: <code>EditorEventHandlers.Editor</code></li><li>アセンブリ: <code>EditorEventHandlers.Editor</code></li><li>対象: Unity Editor</li></ul>
+<p>入力を読み取り、通知と編集範囲を返す条件のインターフェースです。</p>
+<h2>定義</h2>
+<pre><code>public interface IEventCondition&lt;TEvent&gt;</code></pre>
+<p>Do not edit Unity objects, use asynchronous work, or reenter the editor event loop during evaluation.</p>
+<p>実装して登録するインターフェースです。</p>
+<h2>メンバー一覧</h2>
+<div class="table-scroll"><table><thead><tr><th>メンバー</th><th>概要</th></tr></thead><tbody><tr><td><a href="#IEventCondition-1/member-e3dfb9a780c3">string Id { get; }</a></td><td>Stable, nonblank registration identifier. Its getter must be lightweight.</td></tr><tr><td><a href="#IEventCondition-1/member-01c05260a6b5">EditorChangeKind Changes { get; }</a></td><td>Required supported change flags; None and unknown flags are rejected at registration.</td></tr><tr><td><a href="#IEventCondition-1/member-e2fd46501259">bool TryMatch(ConditionContext context, out ConditionMatch&lt;TEvent&gt; match)</a></td><td>Evaluates the change on the editor main thread without editing it.</td></tr></tbody></table></div>
+<a id="member-e3dfb9a780c3"></a>
+<h2><code>Id</code></h2>
+<pre><code>string Id { get; }</code></pre>
+<p>Stable, nonblank registration identifier. Its getter must be lightweight.</p>
+<a id="member-01c05260a6b5"></a>
+<h2><code>Changes</code></h2>
+<pre><code>EditorChangeKind Changes { get; }</code></pre>
+<p>Required supported change flags; None and unknown flags are rejected at registration.</p>
+<a id="member-e2fd46501259"></a>
+<h2><code>TryMatch</code></h2>
+<pre><code>bool TryMatch(ConditionContext context, out ConditionMatch&lt;TEvent&gt; match)</code></pre>
+<p>Evaluates the change on the editor main thread without editing it.</p>
+<h3>引数</h3>
+<div class="table-scroll"><table><thead><tr><th>名前</th><th>説明</th></tr></thead><tbody><tr><td><code>context</code></td><td>This invocation&#x27;s input and independent deadline.</td></tr><tr><td><code>match</code></td><td>Notification and editable hierarchy root when the return value is true.</td></tr></tbody></table></div>
+<h3>戻り値</h3>
+<p>True for a match; false leaves the output unused.</p>
+<h2>使用上の注意</h2>
+<p>条件は同期・読み取り専用です。Unity変更、直接Undo操作、非同期処理、モーダル表示、イベントループ再入を行わないでください。Unity参照を公開するため、読み取り専用性を強制するサンドボックスではありません。</p>
+<p>購読者のない条件は評価しません。入力変更1件・条件1件につき1回評価し、同じ結果を購読者へ共有します。全入力の条件評価が終わってからハンドラを実行します。falseの場合も戻った後に期限を確認します。例外・期限超過・不正な一致結果はその条件を無効化し、対応する購読は待機します。</p>
+<p>通知値も複数の購読者で共有します。通知型はreadonly structや読み取り専用の一覧などで定義し、ハンドラへ必要な検出結果を渡してください。Unity参照の存続・状態は実行時に変わり得ます。</p>
+<h2>関連資料</h2>
+<p><a href="#API_REFERENCE">API一覧</a> / <a href="#CONTRACTS">実行契約</a> / <a href="#HANDLER_AUTHORING">ハンドラーガイド</a> / <a href="#CONDITION_AUTHORING">条件ガイド</a></p></article>
+<article id="IEventHandler-1" hidden><h1><code>IEventHandler&lt;TEvent&gt;</code></h1>
+<ul><li>名前空間: <code>EditorEventHandlers.Editor</code></li><li>アセンブリ: <code>EditorEventHandlers.Editor</code></li><li>対象: Unity Editor</li></ul>
+<p>通知を処理して終了状態を返すハンドラーのインターフェースです。</p>
+<h2>定義</h2>
+<pre><code>public interface IEventHandler&lt;TEvent&gt;</code></pre>
+<p>Use context edit methods, and do not schedule delayed Unity edits or reenter the editor event loop.</p>
+<p>実装して登録するインターフェースです。</p>
+<h2>メンバー一覧</h2>
+<div class="table-scroll"><table><thead><tr><th>メンバー</th><th>概要</th></tr></thead><tbody><tr><td><a href="#IEventHandler-1/member-6358b7e39cbb">string Id { get; }</a></td><td>Stable, nonblank identifier, unique among subscriptions for this notification type.</td></tr><tr><td><a href="#IEventHandler-1/member-407370ebf925">HandlerResult Execute(HandlerContext&lt;TEvent&gt; context)</a></td><td>Handles the notification on the editor main thread within its independent deadline.</td></tr></tbody></table></div>
+<a id="member-6358b7e39cbb"></a>
+<h2><code>Id</code></h2>
+<pre><code>string Id { get; }</code></pre>
+<p>Stable, nonblank identifier, unique among subscriptions for this notification type.</p>
+<a id="member-407370ebf925"></a>
+<h2><code>Execute</code></h2>
+<pre><code>HandlerResult Execute(HandlerContext&lt;TEvent&gt; context)</code></pre>
+<p>Handles the notification on the editor main thread within its independent deadline.</p>
+<h3>引数</h3>
+<div class="table-scroll"><table><thead><tr><th>名前</th><th>説明</th></tr></thead><tbody><tr><td><code>context</code></td><td>Notification, scoped editing methods, and invocation deadline.</td></tr></tbody></table></div>
+<h3>戻り値</h3>
+<p>An explicit success, skip, failure, or cancellation result.</p>
+<h2>使用上の注意</h2>
+<p>async void、バックグラウンドでのUnity編集、終了後の遅延編集、直接Undo操作、イベントループ再入は使用しません。変更にはコンテキストAPIを使います。公開参照への直接書き込みを防ぐ隔離機構はありません。</p>
+<h3><code>HandlerStatus</code> / <code>HandlerResult</code></h3>
+<p>HandlerStatusは <code>Unspecified = 0, Succeeded = 1, Skipped = 2, Failed = 3, Cancelled = 4</code> です。HandlerResultはreadonly structで、公開プロパティは <code>HandlerStatus Status</code>、<code>string Message</code> です。各factoryでnullの理由は空文字へ変換します。</p>
+<p>ハンドラの例外・期限超過はFailureへ変換し、<code>OperationCanceledException</code> はCancelledへ変換します。復元が成功すれば次の購読を実行できます。復元・確定の例外、または実行後のRoot喪失では全体を即時停止します。</p>
+<p>Successを返しても、実行後にRootが失われていればLastResultをFailureへ変更し、そのイベントハンドラーを異常無効として保存します。Context外で破壊されたRootの復元を意味しません。</p>
+<h3><code>HandlerContext</code> / <code>HandlerContext&lt;TEvent&gt;</code></h3>
+<p>基底はabstract class、generic型はsealed classです。公開コンストラクターはなく、外部で継承・生成するための入口ではありません。generic型は以下の全APIに加え <code>TEvent Event</code> を提供します。</p>
+<p>対象はRootまたはその子階層のGameObject/Componentで、Rootと同じシーンにあり、永続アセットではない必要があります。Modifyのeditは記録したtargetのプロパティだけを変更し、作成・削除・親変更には専用APIを使います。別オブジェクトも変更する場合は個別にModifyしてください。</p>
+<p>主な例外は以下です。管理側がExecute中の例外を結果へ変換し、追跡済み変更を復元します。</p>
+<p>対象の破棄状態によってはUnity由来のMissingReferenceException等が発生します。特定のUnityエラーをすべて固定の例外型へ正規化するAPIではありません。</p>
+<h2>関連資料</h2>
+<p><a href="#API_REFERENCE">API一覧</a> / <a href="#CONTRACTS">実行契約</a> / <a href="#HANDLER_AUTHORING">ハンドラーガイド</a> / <a href="#CONDITION_AUTHORING">条件ガイド</a></p></article>
+<article id="SubscriptionMode" hidden><h1><code>SubscriptionMode</code></h1>
+<ul><li>名前空間: <code>EditorEventHandlers.Editor</code></li><li>アセンブリ: <code>EditorEventHandlers.Editor</code></li><li>対象: Unity Editor</li></ul>
+<p>単一・全条件一致・いずれか一致の購読モードです。</p>
+<h2>定義</h2>
+<pre><code>public enum SubscriptionMode</code></pre>
+<h2>メンバー一覧</h2>
+<div class="table-scroll"><table><thead><tr><th>メンバー</th><th>概要</th></tr></thead><tbody><tr><td><a href="#SubscriptionMode/member-5ac4effcc717">Single</a></td><td>One exact notification type.</td></tr><tr><td><a href="#SubscriptionMode/member-18134acabfe9">All</a></td><td>All declared conditions must match the same editable root.</td></tr><tr><td><a href="#SubscriptionMode/member-8ae40056d068">Any</a></td><td>The first matching declared condition supplies the notification and editable root.</td></tr></tbody></table></div>
+<a id="member-5ac4effcc717"></a>
+<h2><code>Single</code></h2>
+<pre><code>Single</code></pre>
+<p>One exact notification type.</p>
+<a id="member-18134acabfe9"></a>
+<h2><code>All</code></h2>
+<pre><code>All</code></pre>
+<p>All declared conditions must match the same editable root.</p>
+<a id="member-8ae40056d068"></a>
+<h2><code>Any</code></h2>
+<pre><code>Any</code></pre>
+<p>The first matching declared condition supplies the notification and editable root.</p>
+<h2>使用上の注意</h2>
+<p>enumです。<code>Single = 0</code> は単一条件、<code>All = 1</code> は全条件一致、<code>Any = 2</code> はいずれか一致を表します。管理側が購読トークンへ設定します。</p>
+<h2>関連資料</h2>
+<p><a href="#API_REFERENCE">API一覧</a> / <a href="#CONTRACTS">実行契約</a> / <a href="#HANDLER_AUTHORING">ハンドラーガイド</a> / <a href="#CONDITION_AUTHORING">条件ガイド</a></p></article>
+<article id="avatar-API_REFERENCE" hidden><h1>Avatar Placement API reference</h1>
+<p>標準の条件プロバイダーが公開する通知型です。名前空間とアセンブリは<code>AvatarPlacement.Editor</code>、すべてEditor専用です。判定実装はinternalです。</p>
+<div class="table-scroll"><table><thead><tr><th>型</th><th>通知・データ</th></tr></thead><tbody><tr><td><a href="#avatar-AvatarPlaced">AvatarPlaced</a></td><td>Descriptorを持つアバターPrefabの新規配置</td></tr><tr><td><a href="#avatar-AvatarChildBreastBlendShapesPlaced">AvatarChildBreastBlendShapesPlaced</a></td><td>アバター直下に配置された対象の、名前にbreastを含むシェイプ</td></tr><tr><td><a href="#avatar-BreastBlendShape">BreastBlendShape</a></td><td>Renderer・Mesh・インデックス・シェイプ名の検出結果</td></tr></tbody></table></div>
+<p>VRChat SDKのDescriptor型を検出すると、標準の2条件を自動登録します。利用するハンドラーが再登録する必要はありません。SDKがない環境では未登録となり、購読は待機します。</p>
+<p><a href="#API_REFERENCE">共通API一覧</a> / <a href="#QUICKSTART">クイックスタート</a></p>
+<p><a href="../../io.github.merciagrimauge.avatar-placement/README.md">パッケージ概要</a></p></article>
+<article id="avatar-AvatarChildBreastBlendShapesPlaced" hidden><h1><code>AvatarChildBreastBlendShapesPlaced</code></h1>
+<ul><li>名前空間: <code>AvatarPlacement.Editor</code></li><li>アセンブリ: <code>AvatarPlacement.Editor</code></li><li>対象: Unity Editor</li></ul>
+<p>アバター直下の対象から検出した胸シェイプ名の通知です。</p>
+<h2>定義</h2>
+<pre><code>public sealed class AvatarChildBreastBlendShapesPlaced</code></pre>
+<p>Name matching does not establish clothing identity or avatar compatibility. Edit Unity references through HandlerContext.</p>
+<p>公開コンストラクターはありません。</p>
+<h2>メンバー一覧</h2>
+<div class="table-scroll"><table><thead><tr><th>メンバー</th><th>概要</th></tr></thead><tbody><tr><td><a href="#avatar-AvatarChildBreastBlendShapesPlaced/member-767b9e7fca4c">public GameObject Avatar { get; }</a></td><td>Immediate parent avatar selected as the handler&#x27;s editable root.</td></tr><tr><td><a href="#avatar-AvatarChildBreastBlendShapesPlaced/member-ec42c4419a59">public GameObject PlacedObject { get; }</a></td><td>Created or reparented direct child; need not be a Prefab instance.</td></tr><tr><td><a href="#avatar-AvatarChildBreastBlendShapesPlaced/member-f3f06144b0ae">public IReadOnlyList&lt;BreastBlendShape&gt; BreastBlendShapes { get; }</a></td><td>Read-only detection results; Unity references may change before a later handler uses them.</td></tr></tbody></table></div>
+<a id="member-767b9e7fca4c"></a>
+<h2><code>Avatar</code></h2>
+<pre><code>public GameObject Avatar { get; }</code></pre>
+<p>Immediate parent avatar selected as the handler&#x27;s editable root.</p>
+<a id="member-ec42c4419a59"></a>
+<h2><code>PlacedObject</code></h2>
+<pre><code>public GameObject PlacedObject { get; }</code></pre>
+<p>Created or reparented direct child; need not be a Prefab instance.</p>
+<a id="member-f3f06144b0ae"></a>
+<h2><code>BreastBlendShapes</code></h2>
+<pre><code>public IReadOnlyList&lt;BreastBlendShape&gt; BreastBlendShapes { get; }</code></pre>
+<p>Read-only detection results; Unity references may change before a later handler uses them.</p>
+<h2>使用上の注意</h2>
+<p>sealed classです。公開コンストラクターはありません。</p>
+<p>標準条件IDは<code>io.github.merciagrimauge.avatar-placement.child-breast-blend-shapes</code>です。標準パッケージがSDKのDescriptor型を検出した場合に自動登録し、イベントハンドラーが登録を重ねる必要はありません。</p>
+<p>入力はCreatedまたはParentChangedです。対象自身がDescriptorを持つアバターなら除外します。対象はPrefabに限定しません。親変更では現在の親・シーンが通知の変更後の値と一致する必要があります。作成では現在のシーンが通知値と一致する必要があります。Avatar/PlacedObjectは通常の読み込み済みシーンのオブジェクトである必要があります。トランザクションRootはAvatarです。</p>
+<p>対象自身とその子階層のSkinnedMeshRendererを、非アクティブを含めて検索します。sharedMeshのブレンドシェイプ名に <code>breast</code> がOrdinalIgnoreCaseで部分一致したものを一覧にします。アバター本体やシーン全体は走査しません。頂点・フレームデータの読み取りやウェイト変更はありません。</p>
+<p>同じバッチの同一対象は1回だけ検出・通知します。同じMeshの名前走査は1対象の判定中に共有し、判定後にキャッシュを破棄します。シーン読み込み、再コンパイル、後からのMesh交換・ウェイト変更による再通知はありません。アバターPrefabに元から含まれる子の一括探索も行いません。</p>
+<p>名前に基づく検出です。衣装であること、変形部位、アバター側との対応・互換性を判定しません。条件実装はこのパッケージのEditorフォルダーにあります。</p>
+<h2>関連資料</h2>
+<p><a href="#API_REFERENCE">API一覧</a></p></article>
+<article id="avatar-AvatarPlaced" hidden><h1><code>AvatarPlaced</code></h1>
+<ul><li>名前空間: <code>AvatarPlacement.Editor</code></li><li>アセンブリ: <code>AvatarPlacement.Editor</code></li><li>対象: Unity Editor</li></ul>
+<p>Descriptorを持つアバターPrefabの新規配置通知です。</p>
+<h2>定義</h2>
+<pre><code>public readonly struct AvatarPlaced</code></pre>
+<p>The Unity reference exposes current state for inspection; edit through the supplied HandlerContext.</p>
+<h2>メンバー一覧</h2>
+<div class="table-scroll"><table><thead><tr><th>メンバー</th><th>概要</th></tr></thead><tbody><tr><td><a href="#avatar-AvatarPlaced/member-16809f5bc0cd">public GameObject Avatar { get; }</a></td><td>Detected avatar Prefab instance root; it may change or be destroyed before later handlers use it.</td></tr><tr><td><a href="#avatar-AvatarPlaced/member-ed6470b05960">public AvatarPlaced(GameObject avatar)</a></td><td>Creates a notification value without validating or publishing it.</td></tr></tbody></table></div>
+<a id="member-16809f5bc0cd"></a>
+<h2><code>Avatar</code></h2>
+<pre><code>public GameObject Avatar { get; }</code></pre>
+<p>Detected avatar Prefab instance root; it may change or be destroyed before later handlers use it.</p>
+<a id="member-ed6470b05960"></a>
+<h2><code>Constructor</code></h2>
+<pre><code>public AvatarPlaced(GameObject avatar)</code></pre>
+<p>Creates a notification value without validating or publishing it.</p>
+<h3>引数</h3>
+<div class="table-scroll"><table><thead><tr><th>名前</th><th>説明</th></tr></thead><tbody><tr><td><code>avatar</code></td><td>Avatar reference stored in the value.</td></tr></tbody></table></div>
+<h2>使用上の注意</h2>
+<p>readonly structです。</p>
+<p>標準条件IDは <code>local.avatar-placement.created</code>、入力はCreatedです。対象自身に <code>VRC.SDKBase.VRC_AvatarDescriptor</code> 派生Componentがあり、Prefabインスタンスのルートであることを確認します。通常の読み込み済みシーン、非永続、Prefabステージ外、プレビューシーン外で、通知のシーンから移動していないことが必要です。非アクティブでも対象です。</p>
+<p>トランザクションRootはAvatarです。SDKのDescriptor型が見つかったときだけ自動登録します。購読者のない条件は評価しません。コンテナの子や既存シーンのアバターを走査しません。AAOの有無、アセット名・パス・GUIDは条件に含めません。</p>
+<p>publicコンストラクターで値を作っても、管理側に通知を投入するpublic APIはありません。</p>
+<h2>関連資料</h2>
+<p><a href="#API_REFERENCE">API一覧</a></p></article>
+<article id="avatar-BreastBlendShape" hidden><h1><code>BreastBlendShape</code></h1>
+<ul><li>名前空間: <code>AvatarPlacement.Editor</code></li><li>アセンブリ: <code>AvatarPlacement.Editor</code></li><li>対象: Unity Editor</li></ul>
+<p>Renderer・Mesh・インデックス・名前の検出結果です。</p>
+<h2>定義</h2>
+<pre><code>public readonly struct BreastBlendShape</code></pre>
+<p>Renderer and Mesh are current Unity references. Recheck the mesh before using its captured index.</p>
+<h2>メンバー一覧</h2>
+<div class="table-scroll"><table><thead><tr><th>メンバー</th><th>概要</th></tr></thead><tbody><tr><td><a href="#avatar-BreastBlendShape/member-2b0774ca0458">public SkinnedMeshRenderer Renderer { get; }</a></td><td>Renderer using the detected shape; may later change or be destroyed.</td></tr><tr><td><a href="#avatar-BreastBlendShape/member-cd6794a606dd">public Mesh Mesh { get; }</a></td><td>Shared mesh at detection time; a Unity reference for inspection.</td></tr><tr><td><a href="#avatar-BreastBlendShape/member-5d00e1f7b712">public int Index { get; }</a></td><td>Blend shape index at detection time; mesh changes can invalidate its meaning.</td></tr><tr><td><a href="#avatar-BreastBlendShape/member-a5c41d7b322f">public string Name { get; }</a></td><td>Blend shape name captured at detection time.</td></tr></tbody></table></div>
+<a id="member-2b0774ca0458"></a>
+<h2><code>Renderer</code></h2>
+<pre><code>public SkinnedMeshRenderer Renderer { get; }</code></pre>
+<p>Renderer using the detected shape; may later change or be destroyed.</p>
+<a id="member-cd6794a606dd"></a>
+<h2><code>Mesh</code></h2>
+<pre><code>public Mesh Mesh { get; }</code></pre>
+<p>Shared mesh at detection time; a Unity reference for inspection.</p>
+<a id="member-5d00e1f7b712"></a>
+<h2><code>Index</code></h2>
+<pre><code>public int Index { get; }</code></pre>
+<p>Blend shape index at detection time; mesh changes can invalidate its meaning.</p>
+<a id="member-a5c41d7b322f"></a>
+<h2><code>Name</code></h2>
+<pre><code>public string Name { get; }</code></pre>
+<p>Blend shape name captured at detection time.</p>
+<h2>使用上の注意</h2>
+<p>readonly structです。公開コンストラクターはありません。</p>
+<p>すべて読み取り専用です。Renderer/MeshはUnity参照であり、後のハンドラで変更・破棄される場合があります。Meshを交換・変更すればIndexの意味も変わるため、使用時に必要な状態を確認してください。</p>
+<h2>関連資料</h2>
+<p><a href="#API_REFERENCE">API一覧</a></p></article></main></div><noscript>JavaScriptを有効にするか、同じフォルダーのAPI_REFERENCE.mdを参照してください。</noscript><script>const pages=[{"id": "API_REFERENCE", "title": "API reference", "category": "ガイド", "members": []}, {"id": "QUICKSTART", "title": "クイックスタート", "category": "ガイド", "members": []}, {"id": "HANDLER_AUTHORING", "title": "イベントハンドラーの作成ガイド", "category": "ガイド", "members": []}, {"id": "CONDITION_AUTHORING", "title": "条件プロバイダーの作成・公開ガイド", "category": "ガイド", "members": []}, {"id": "CONTRACTS", "title": "実行契約とライフサイクル", "category": "ガイド", "members": []}, {"id": "CompositeEvent", "title": "CompositeEvent", "category": "EditorEventHandlers.Editor", "members": [{"id": "CompositeEvent/member-413da24e39dd", "title": "Change"}, {"id": "CompositeEvent/member-386c537bfaec", "title": "RequiredTypes"}, {"id": "CompositeEvent/member-be21240ee1d1", "title": "TryGet\u003cT>"}]}, {"id": "ConditionContext", "title": "ConditionContext", "category": "EditorEventHandlers.Editor", "members": [{"id": "ConditionContext/member-db4f61621513", "title": "Change"}, {"id": "ConditionContext/member-62a4a3a7a4ed", "title": "BatchId"}, {"id": "ConditionContext/member-2be2d9f3b629", "title": "TimeLimit"}, {"id": "ConditionContext/member-989c9754c54b", "title": "Elapsed"}, {"id": "ConditionContext/member-802010a3c07f", "title": "CheckDeadline"}]}, {"id": "ConditionDeadlineExceededException", "title": "ConditionDeadlineExceededException", "category": "EditorEventHandlers.Editor", "members": []}, {"id": "ConditionMatch-1", "title": "ConditionMatch\u003cTEvent>", "category": "EditorEventHandlers.Editor", "members": [{"id": "ConditionMatch-1/member-1b0989ef308a", "title": "Event"}, {"id": "ConditionMatch-1/member-ff4c32ce6008", "title": "Root"}, {"id": "ConditionMatch-1/member-b5bfdf949266", "title": "Constructor"}]}, {"id": "ConditionRegistration", "title": "ConditionRegistration", "category": "EditorEventHandlers.Editor", "members": [{"id": "ConditionRegistration/member-2f04af916893", "title": "Id"}, {"id": "ConditionRegistration/member-42254476742f", "title": "EventType"}, {"id": "ConditionRegistration/member-fcaf429032a1", "title": "Changes"}, {"id": "ConditionRegistration/member-30d93ae2400a", "title": "TimeLimit"}, {"id": "ConditionRegistration/member-777c2705164a", "title": "IsDisposed"}, {"id": "ConditionRegistration/member-c18aee63ed88", "title": "IsEnabled"}, {"id": "ConditionRegistration/member-cb89bf583b82", "title": "DisabledReason"}, {"id": "ConditionRegistration/member-733c4dff35b9", "title": "LastDuration"}, {"id": "ConditionRegistration/member-158e3eb82bbe", "title": "Dispose"}]}, {"id": "EditorChange", "title": "EditorChange", "category": "EditorEventHandlers.Editor", "members": [{"id": "EditorChange/member-8f625f1983eb", "title": "Kind"}, {"id": "EditorChange/member-2ad54d145ab4", "title": "ObjectId"}, {"id": "EditorChange/member-f5e32bc32e9b", "title": "SceneId"}, {"id": "EditorChange/member-c28d6fd26eca", "title": "PreviousSceneId"}, {"id": "EditorChange/member-5aaee8265f2f", "title": "PreviousParentId"}, {"id": "EditorChange/member-b46e44022508", "title": "NewParentId"}, {"id": "EditorChange/member-74b60158dc49", "title": "Target"}, {"id": "EditorChange/member-b26a07e929b0", "title": "GameObject"}, {"id": "EditorChange/member-2376e7f1650f", "title": "PreviousParent"}, {"id": "EditorChange/member-6b7440a7d128", "title": "NewParent"}, {"id": "EditorChange/member-720334c64a6e", "title": "Equals"}, {"id": "EditorChange/member-7dad5a325d0e", "title": "Equals"}, {"id": "EditorChange/member-9df9da68d15f", "title": "GetHashCode"}]}, {"id": "EditorChangeKind", "title": "EditorChangeKind", "category": "EditorEventHandlers.Editor", "members": [{"id": "EditorChangeKind/member-84cb4ed6a844", "title": "None"}, {"id": "EditorChangeKind/member-5f71f985ed09", "title": "Created"}, {"id": "EditorChangeKind/member-cf96fa0396b0", "title": "ParentChanged"}, {"id": "EditorChangeKind/member-544472d517b9", "title": "PropertiesChanged"}, {"id": "EditorChangeKind/member-721160c562df", "title": "StructureChanged"}, {"id": "EditorChangeKind/member-17b2ee79ed89", "title": "HierarchyChanged"}, {"id": "EditorChangeKind/member-500cfd21a724", "title": "ChildrenReordered"}, {"id": "EditorChangeKind/member-5f01b0e58280", "title": "Destroyed"}, {"id": "EditorChangeKind/member-b38825d75834", "title": "PrefabUpdated"}]}, {"id": "EditorEvents", "title": "EditorEvents", "category": "EditorEventHandlers.Editor", "members": [{"id": "EditorEvents/member-71a21c90ff6e", "title": "RegisterCondition\u003cT>"}, {"id": "EditorEvents/member-95ae3c191f3d", "title": "Subscribe\u003cT>"}, {"id": "EditorEvents/member-0bff08207ebc", "title": "SubscribeAll"}, {"id": "EditorEvents/member-faa7de1e9c83", "title": "SubscribeAny"}]}, {"id": "EditorObjectId", "title": "EditorObjectId", "category": "EditorEventHandlers.Editor", "members": [{"id": "EditorObjectId/member-11181cc8ed0a", "title": "IsValid"}, {"id": "EditorObjectId/member-285913dd9269", "title": "FromObject"}, {"id": "EditorObjectId/member-1af2b5a19510", "title": "Resolve"}, {"id": "EditorObjectId/member-2cfa42bfd42b", "title": "Equals"}, {"id": "EditorObjectId/member-18e238138d9e", "title": "Equals"}, {"id": "EditorObjectId/member-54bf7150b4e2", "title": "GetHashCode"}, {"id": "EditorObjectId/member-2f859b10fc4b", "title": "op_Equality"}, {"id": "EditorObjectId/member-6dca5bfc42f1", "title": "op_Inequality"}]}, {"id": "EditorSceneId", "title": "EditorSceneId", "category": "EditorEventHandlers.Editor", "members": [{"id": "EditorSceneId/member-c16f2994c0cc", "title": "IsValid"}, {"id": "EditorSceneId/member-31afd7b80345", "title": "FromScene"}, {"id": "EditorSceneId/member-002f54545c97", "title": "Equals"}, {"id": "EditorSceneId/member-c8ee11ffdb9d", "title": "Equals"}, {"id": "EditorSceneId/member-497956f98383", "title": "GetHashCode"}, {"id": "EditorSceneId/member-7c888896ea70", "title": "op_Equality"}, {"id": "EditorSceneId/member-0b5ae3601b50", "title": "op_Inequality"}]}, {"id": "EventSubscription", "title": "EventSubscription", "category": "EditorEventHandlers.Editor", "members": [{"id": "EventSubscription/member-1bb8bf4ed03d", "title": "Id"}, {"id": "EventSubscription/member-ad6c4d89651d", "title": "EventType"}, {"id": "EventSubscription/member-2a926cc77565", "title": "Mode"}, {"id": "EventSubscription/member-27f4f9333f99", "title": "ConditionTypes"}, {"id": "EventSubscription/member-856f94e40421", "title": "TimeLimit"}, {"id": "EventSubscription/member-df1809a6b779", "title": "IsDisposed"}, {"id": "EventSubscription/member-336e62e8fb71", "title": "IsEnabled"}, {"id": "EventSubscription/member-68eeaaf5b414", "title": "IsActive"}, {"id": "EventSubscription/member-b64ca99fd124", "title": "DisabledReason"}, {"id": "EventSubscription/member-9aba67b54815", "title": "LastResult"}, {"id": "EventSubscription/member-ea8f72146cc0", "title": "LastDuration"}, {"id": "EventSubscription/member-f6917fdae8ca", "title": "Dispose"}]}, {"id": "HandlerContext-1", "title": "HandlerContext\u003cTEvent>", "category": "EditorEventHandlers.Editor", "members": [{"id": "HandlerContext-1/member-117f893247d0", "title": "Event"}]}, {"id": "HandlerContext", "title": "HandlerContext", "category": "EditorEventHandlers.Editor", "members": [{"id": "HandlerContext/member-ede288ee2642", "title": "Root"}, {"id": "HandlerContext/member-e1ec18c3ad2d", "title": "TimeLimit"}, {"id": "HandlerContext/member-35985a8812d5", "title": "Elapsed"}, {"id": "HandlerContext/member-1c4cd4889a28", "title": "CheckDeadline"}, {"id": "HandlerContext/member-e5937470cfda", "title": "AddComponent"}, {"id": "HandlerContext/member-0e3f39ab69cd", "title": "AddComponent\u003cT>"}, {"id": "HandlerContext/member-0385478dd0c3", "title": "Modify"}, {"id": "HandlerContext/member-63974b68e1e3", "title": "CreateChild"}, {"id": "HandlerContext/member-4f8ca8cdf6f8", "title": "InstantiatePrefab"}, {"id": "HandlerContext/member-045592dcbb96", "title": "SetParent"}, {"id": "HandlerContext/member-b972d4f48498", "title": "Destroy"}]}, {"id": "HandlerDeadlineExceededException", "title": "HandlerDeadlineExceededException", "category": "EditorEventHandlers.Editor", "members": []}, {"id": "HandlerResult", "title": "HandlerResult", "category": "EditorEventHandlers.Editor", "members": [{"id": "HandlerResult/member-03c844cc7f93", "title": "Status"}, {"id": "HandlerResult/member-c9c6eea44821", "title": "Message"}, {"id": "HandlerResult/member-913735074221", "title": "Success"}, {"id": "HandlerResult/member-7c9e0dd7a368", "title": "Skip"}, {"id": "HandlerResult/member-63096106b7e3", "title": "Failure"}, {"id": "HandlerResult/member-69cac07e885f", "title": "Cancel"}]}, {"id": "HandlerStatus", "title": "HandlerStatus", "category": "EditorEventHandlers.Editor", "members": [{"id": "HandlerStatus/member-80f6130a2fd4", "title": "Unspecified"}, {"id": "HandlerStatus/member-1230b83d04d0", "title": "Succeeded"}, {"id": "HandlerStatus/member-b7ea9828303d", "title": "Skipped"}, {"id": "HandlerStatus/member-e23fa635deb3", "title": "Failed"}, {"id": "HandlerStatus/member-210c14ad8134", "title": "Cancelled"}]}, {"id": "IEventCondition-1", "title": "IEventCondition\u003cTEvent>", "category": "EditorEventHandlers.Editor", "members": [{"id": "IEventCondition-1/member-e3dfb9a780c3", "title": "Id"}, {"id": "IEventCondition-1/member-01c05260a6b5", "title": "Changes"}, {"id": "IEventCondition-1/member-e2fd46501259", "title": "TryMatch"}]}, {"id": "IEventHandler-1", "title": "IEventHandler\u003cTEvent>", "category": "EditorEventHandlers.Editor", "members": [{"id": "IEventHandler-1/member-6358b7e39cbb", "title": "Id"}, {"id": "IEventHandler-1/member-407370ebf925", "title": "Execute"}]}, {"id": "SubscriptionMode", "title": "SubscriptionMode", "category": "EditorEventHandlers.Editor", "members": [{"id": "SubscriptionMode/member-5ac4effcc717", "title": "Single"}, {"id": "SubscriptionMode/member-18134acabfe9", "title": "All"}, {"id": "SubscriptionMode/member-8ae40056d068", "title": "Any"}]}, {"id": "avatar-API_REFERENCE", "title": "Avatar Placement API reference", "category": "ガイド", "members": []}, {"id": "avatar-AvatarChildBreastBlendShapesPlaced", "title": "AvatarChildBreastBlendShapesPlaced", "category": "AvatarPlacement.Editor", "members": [{"id": "avatar-AvatarChildBreastBlendShapesPlaced/member-767b9e7fca4c", "title": "Avatar"}, {"id": "avatar-AvatarChildBreastBlendShapesPlaced/member-ec42c4419a59", "title": "PlacedObject"}, {"id": "avatar-AvatarChildBreastBlendShapesPlaced/member-f3f06144b0ae", "title": "BreastBlendShapes"}]}, {"id": "avatar-AvatarPlaced", "title": "AvatarPlaced", "category": "AvatarPlacement.Editor", "members": [{"id": "avatar-AvatarPlaced/member-16809f5bc0cd", "title": "Avatar"}, {"id": "avatar-AvatarPlaced/member-ed6470b05960", "title": "Constructor"}]}, {"id": "avatar-BreastBlendShape", "title": "BreastBlendShape", "category": "AvatarPlacement.Editor", "members": [{"id": "avatar-BreastBlendShape/member-2b0774ca0458", "title": "Renderer"}, {"id": "avatar-BreastBlendShape/member-cd6794a606dd", "title": "Mesh"}, {"id": "avatar-BreastBlendShape/member-5d00e1f7b712", "title": "Index"}, {"id": "avatar-BreastBlendShape/member-a5c41d7b322f", "title": "Name"}]}];const nav=document.getElementById('navigation');const input=document.getElementById('search');const status=document.getElementById('search-status');function buildNav(){const query=input.value.trim().toLocaleLowerCase();nav.replaceChildren();let count=0;for(const group of ['ガイド','EditorEventHandlers.Editor','AvatarPlacement.Editor']){const matching=pages.filter(p=>p.category===group&&(p.title.toLocaleLowerCase().includes(query)||p.members.some(m=>m.title.toLocaleLowerCase().includes(query))));if(!matching.length)continue;const h=document.createElement('h2');h.textContent=group;nav.append(h);for(const p of matching){const a=document.createElement('a');a.href='#'+p.id;a.textContent=p.title;a.dataset.page=p.id;nav.append(a);count++;if(query)for(const m of p.members.filter(m=>m.title.toLocaleLowerCase().includes(query))){const a=document.createElement('a');a.href='#'+m.id;a.textContent=m.title;a.className='member';nav.append(a);count++;}}}status.textContent=query?count+' 件':'型名・メンバー名で検索';markCurrent();}function markCurrent(){const pid=decodeURIComponent(location.hash.slice(1)).split('/')[0]||'API_REFERENCE';for(const a of nav.querySelectorAll('[data-page]')){if(a.dataset.page===pid)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');}}function show(){const parts=decodeURIComponent(location.hash.slice(1)).split('/');const pid=pages.some(p=>p.id===parts[0])?parts[0]:'API_REFERENCE';for(const p of pages)document.getElementById(p.id).hidden=p.id!==pid;document.title=(pages.find(p=>p.id===pid).title)+' | Editor Event Handlers';markCurrent();const active=document.getElementById(pid);const target=parts[1]?Array.from(active.querySelectorAll('[id]')).find(e=>e.id===parts[1]):null;if(target)target.scrollIntoView();else window.scrollTo(0,0);}input.addEventListener('input',buildNav);window.addEventListener('hashchange',show);buildNav();show();</script></body></html>
