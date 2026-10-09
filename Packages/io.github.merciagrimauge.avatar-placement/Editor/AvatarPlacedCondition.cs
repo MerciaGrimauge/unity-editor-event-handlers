@@ -8,14 +8,14 @@ using UnityEngine;
 namespace AvatarPlacement.Editor
 {
     // Public semantic contract. Consumers do not need the condition implementation.
-    /// <summary>Notification that the standard condition detected an avatar Prefab instance root being created.</summary>
-    /// <remarks>The Unity reference exposes current state for inspection; edit through the supplied HandlerContext.</remarks>
+    /// <summary>標準条件がアバター Prefab インスタンスのルートの新規作成を検出した通知です。</summary>
+    /// <remarks>Unity 参照は現在の状態の確認に使います。編集には渡された HandlerContext を使ってください。</remarks>
     public readonly struct AvatarPlaced
     {
-        /// <summary>Detected avatar Prefab instance root; it may change or be destroyed before later handlers use it.</summary>
+        /// <summary>検出したアバター Prefab インスタンスのルートです。後続のハンドラーが使う前に、状態が変わったり破棄されたりする場合があります。</summary>
         public GameObject Avatar { get; }
-        /// <summary>Creates a notification value without validating or publishing it.</summary>
-        /// <param name="avatar">Avatar reference stored in the value.</param>
+        /// <summary>通知値を作成します。値の検証や通知の送信は行いません。</summary>
+        /// <param name="avatar">通知値に保存するアバターへの参照です。</param>
         public AvatarPlaced(GameObject avatar) { Avatar = avatar; }
     }
 

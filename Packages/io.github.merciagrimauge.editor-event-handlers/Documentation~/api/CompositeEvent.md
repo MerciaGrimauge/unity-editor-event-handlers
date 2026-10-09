@@ -12,7 +12,7 @@ AND/ORで選択した条件の通知を型ごとに取得です。
 public sealed class CompositeEvent
 ```
 
-The collection is immutable; contained notification objects retain their original references. Any exposes only its first matching result.
+コレクションは変更できません。含まれる通知オブジェクトは元の参照を保持します。Any は最初に一致した結果だけを公開します。
 
 公開コンストラクターはありません。
 
@@ -20,9 +20,9 @@ The collection is immutable; contained notification objects retain their origina
 
 | メンバー | 概要 |
 |---|---|
-| [public EditorChange Change { get; }](#member-413da24e39dd) | The input change shared by every evaluated condition in this combination. |
-| [public IReadOnlyList&lt;Type&gt; RequiredTypes { get; }](#member-386c537bfaec) | Immutable required notification types in the subscription's declaration order. |
-| [public bool TryGet&lt;TEvent&gt;(out TEvent notification)](#member-be21240ee1d1) | Reads a selected notification by its exact declared type. |
+| [public EditorChange Change { get; }](#member-413da24e39dd) | この組み合わせで評価した全条件が共有する入力変更です。 |
+| [public IReadOnlyList&lt;Type&gt; RequiredTypes { get; }](#member-386c537bfaec) | 購読時の指定順に並んだ、変更できない必須通知型の一覧です。 |
+| [public bool TryGet&lt;TEvent&gt;(out TEvent notification)](#member-be21240ee1d1) | 指定した型と完全一致する、選択済みの通知を取得します。 |
 
 <a id="member-413da24e39dd"></a>
 
@@ -32,7 +32,7 @@ The collection is immutable; contained notification objects retain their origina
 public EditorChange Change { get; }
 ```
 
-The input change shared by every evaluated condition in this combination.
+この組み合わせで評価した全条件が共有する入力変更です。
 
 <a id="member-386c537bfaec"></a>
 
@@ -42,7 +42,7 @@ The input change shared by every evaluated condition in this combination.
 public IReadOnlyList<Type> RequiredTypes { get; }
 ```
 
-Immutable required notification types in the subscription's declaration order.
+購読時の指定順に並んだ、変更できない必須通知型の一覧です。
 
 <a id="member-be21240ee1d1"></a>
 
@@ -52,23 +52,23 @@ Immutable required notification types in the subscription's declaration order.
 public bool TryGet<TEvent>(out TEvent notification)
 ```
 
-Reads a selected notification by its exact declared type.
+指定した型と完全一致する、選択済みの通知を取得します。
 
 ### 型パラメーター
 
 | 名前 | 説明 |
 |---|---|
-| `TEvent` | Exact condition notification type; derived or assignable types are not substituted. |
+| `TEvent` | 条件に指定した通知型です。派生型や代入可能な別型で代用しません。 |
 
 ### 引数
 
 | 名前 | 説明 |
 |---|---|
-| `notification` | Saved result when present, otherwise the type's default value. |
+| `notification` | 保存済みの結果です。結果がなければ、その型の既定値です。 |
 
 ### 戻り値
 
-Whether the combination exposes a notification of this exact type.
+この組み合わせに、指定した型と完全一致する通知が含まれるかどうかです。
 
 ## 使用上の注意
 

@@ -7,62 +7,62 @@ using Object = UnityEngine.Object;
 namespace EditorEventHandlers.Editor
 {
     // A new member must also be listed in EventDispatcher.Kinds and translated by UnityChangeSource.
-    /// <summary>Supported Unity change categories. Conditions combine flags; each input change has one category.</summary>
+    /// <summary>対応する Unity 変更の種類です。条件はフラグを組み合わせて指定します。各入力変更は1種類です。</summary>
     [Flags]
     public enum EditorChangeKind
     {
-        /// <summary>No category; cannot be registered as a condition's change mask.</summary>
+        /// <summary>変更の種類を指定しない値です。条件の変更フラグとしては登録できません。</summary>
         None = 0,
-        /// <summary>A GameObject hierarchy was created.</summary>
+        /// <summary>GameObject の階層が作成されました。</summary>
         Created = 1,
-        /// <summary>A GameObject's parent or scene changed.</summary>
+        /// <summary>GameObject の親または所属シーンが変更されました。</summary>
         ParentChanged = 2,
-        /// <summary>A GameObject or Component's properties changed.</summary>
+        /// <summary>GameObject または Component のプロパティが変更されました。</summary>
         PropertiesChanged = 4,
-        /// <summary>A GameObject's Component structure changed.</summary>
+        /// <summary>GameObject のコンポーネント構成が変更されました。</summary>
         StructureChanged = 8,
-        /// <summary>A GameObject hierarchy's structure changed.</summary>
+        /// <summary>GameObject の階層構造が変更されました。</summary>
         HierarchyChanged = 16,
-        /// <summary>Children were reordered.</summary>
+        /// <summary>子オブジェクトの順序が変更されました。</summary>
         ChildrenReordered = 32,
-        /// <summary>A GameObject hierarchy was destroyed.</summary>
+        /// <summary>GameObject の階層が破棄されました。</summary>
         Destroyed = 64,
-        /// <summary>A prefab instance was updated.</summary>
+        /// <summary>Prefab インスタンスが更新されました。</summary>
         PrefabUpdated = 128
     }
 
     // Snapshot of the native notification. References resolve at evaluation time and may be null.
     // For Destroyed, PreviousSceneId repeats SceneId and PreviousParentId is the last parent.
-    /// <summary>Snapshot of a native change's category and temporary identities.</summary>
-    /// <remarks>Resolved Unity references expose current state for inspection; they may be null. This does not identify the user who caused a change.</remarks>
+    /// <summary>Unity の変更通知から保存した、変更の種類と一時的な識別子です。</summary>
+    /// <remarks>識別子から取得する Unity 参照は現在の状態の確認用で、null の場合があります。変更を起こしたユーザーを識別する情報ではありません。</remarks>
     public readonly struct EditorChange : IEquatable<EditorChange>
     {
-        /// <summary>The single category of the input notification.</summary>
+        /// <summary>入力通知の変更の種類です。</summary>
         public EditorChangeKind Kind { get; }
-        /// <summary>Temporary identity of the notification's target.</summary>
+        /// <summary>通知対象の一時的な識別子です。</summary>
         public EditorObjectId ObjectId { get; }
-        /// <summary>Notification-time scene identity; for a parent change, the new scene.</summary>
+        /// <summary>通知時点のシーン識別子です。親変更の場合は新しい所属シーンです。</summary>
         public EditorSceneId SceneId { get; }
-        /// <summary>Previous scene for parent changes; the same as SceneId for destruction; otherwise default.</summary>
+        /// <summary>親変更前の所属シーンです。破棄の場合は SceneId と同じ値、それ以外は default です。</summary>
         public EditorSceneId PreviousSceneId { get; }
-        /// <summary>Previous parent for parent changes or last parent for destruction; otherwise default.</summary>
+        /// <summary>親変更前の親、または破棄直前の親です。それ以外は default です。</summary>
         public EditorObjectId PreviousParentId { get; }
-        /// <summary>New parent for parent changes; otherwise default.</summary>
+        /// <summary>親変更時の新しい親です。それ以外は default です。</summary>
         public EditorObjectId NewParentId { get; }
-        /// <summary>Resolves the current target on the editor main thread, or null if unavailable.</summary>
-        /// <exception cref="InvalidOperationException">Called outside the editor main thread.</exception>
+        /// <summary>Editor のメインスレッドで現在の対象への参照を取得します。取得できない場合は null です。</summary>
+        /// <exception cref="InvalidOperationException">Editor のメインスレッド以外で呼び出した場合です。</exception>
         public Object Target => ObjectId.Resolve();
-        /// <summary>Resolves the target GameObject, or a Component's owning GameObject, on the editor main thread; otherwise null.</summary>
-        /// <exception cref="InvalidOperationException">Called outside the editor main thread.</exception>
+        /// <summary>Editor のメインスレッドで対象の GameObject、または対象 Component が属する GameObject を取得します。取得できない場合は null です。</summary>
+        /// <exception cref="InvalidOperationException">Editor のメインスレッド以外で呼び出した場合です。</exception>
         public GameObject GameObject
         {
             get { var target = Target; return target is Component component ? component.gameObject : target as GameObject; }
         }
-        /// <summary>Resolves the previous parent's current GameObject on the editor main thread, or null.</summary>
-        /// <exception cref="InvalidOperationException">Called outside the editor main thread.</exception>
+        /// <summary>Editor のメインスレッドで変更前の親の現在の GameObject を取得します。取得できない場合は null です。</summary>
+        /// <exception cref="InvalidOperationException">Editor のメインスレッド以外で呼び出した場合です。</exception>
         public GameObject PreviousParent => PreviousParentId.Resolve() as GameObject;
-        /// <summary>Resolves the new parent's current GameObject on the editor main thread, or null.</summary>
-        /// <exception cref="InvalidOperationException">Called outside the editor main thread.</exception>
+        /// <summary>Editor のメインスレッドで新しい親の現在の GameObject を取得します。取得できない場合は null です。</summary>
+        /// <exception cref="InvalidOperationException">Editor のメインスレッド以外で呼び出した場合です。</exception>
         public GameObject NewParent => NewParentId.Resolve() as GameObject;
 
         internal EditorChange(EditorChangeKind kind, EditorObjectId id, EditorSceneId scene, EditorSceneId previousScene = default,
@@ -71,15 +71,15 @@ namespace EditorEventHandlers.Editor
             Kind = kind; ObjectId = id; SceneId = scene; PreviousSceneId = previousScene;
             PreviousParentId = previousParent; NewParentId = newParent;
         }
-        /// <summary>Compares the category and all stored identities without resolving Unity objects.</summary>
-        /// <param name="other">Change to compare.</param>
-        /// <returns>Whether every stored field is equal.</returns>
+        /// <summary>Unity オブジェクトへの参照を取得せず、変更の種類と保存した全識別子を比較します。</summary>
+        /// <param name="other">比較対象の変更です。</param>
+        /// <returns>保存した全フィールドが等しいかどうかです。</returns>
         public bool Equals(EditorChange other) => Kind == other.Kind && ObjectId == other.ObjectId
             && SceneId == other.SceneId && PreviousSceneId == other.PreviousSceneId
             && PreviousParentId == other.PreviousParentId && NewParentId == other.NewParentId;
         /// <inheritdoc />
         public override bool Equals(object obj) => obj is EditorChange other && Equals(other);
-        /// <summary>Hash of the category and all identities for temporary collections.</summary>
+        /// <summary>一時的なコレクションに使う、変更の種類と全識別子のハッシュ値です。</summary>
         public override int GetHashCode()
         {
             unchecked
@@ -94,58 +94,58 @@ namespace EditorEventHandlers.Editor
     }
 
     // Condition provider: read-only detection. One definition per notification type.
-    /// <summary>Defines a synchronous, read-only condition for an exact notification type.</summary>
-    /// <typeparam name="TEvent">Notification type shared with its subscribers.</typeparam>
-    /// <remarks>Do not edit Unity objects, use asynchronous work, or reenter the editor event loop during evaluation.</remarks>
+    /// <summary>指定した通知型に対する、同期的で読み取り専用の条件を定義します。</summary>
+    /// <typeparam name="TEvent">購読者と共有する通知の型です。</typeparam>
+    /// <remarks>評価中は Unity オブジェクトの編集、非同期処理、Editor のイベントループへの再入を行わないでください。</remarks>
     public interface IEventCondition<TEvent>
     {
-        /// <summary>Stable, nonblank registration identifier. Its getter must be lightweight.</summary>
+        /// <summary>空白でない安定した登録識別子です。ゲッターは軽量な処理にしてください。</summary>
         string Id { get; }
-        /// <summary>Required supported change flags; None and unknown flags are rejected at registration.</summary>
+        /// <summary>評価対象の変更フラグです。None や未対応のフラグは登録時に拒否します。</summary>
         EditorChangeKind Changes { get; }
-        /// <summary>Evaluates the change on the editor main thread without editing it.</summary>
-        /// <param name="context">This invocation's input and independent deadline.</param>
-        /// <param name="match">Notification and editable hierarchy root when the return value is true.</param>
-        /// <returns>True for a match; false leaves the output unused.</returns>
+        /// <summary>Editor のメインスレッドで、対象を編集せずに変更を評価します。</summary>
+        /// <param name="context">この呼び出しの入力と、個別の期限です。</param>
+        /// <param name="match">戻り値が true のときの通知と、編集可能な階層のルートです。</param>
+        /// <returns>一致した場合は true です。false の場合、出力値は使いません。</returns>
         bool TryMatch(ConditionContext context, out ConditionMatch<TEvent> match);
     }
 
-    /// <summary>Notification and editable hierarchy selected by a condition.</summary>
-    /// <typeparam name="TEvent">Exact notification type.</typeparam>
+    /// <summary>条件が選んだ通知と、編集可能な階層です。</summary>
+    /// <typeparam name="TEvent">通知の型です。型は完全一致で扱います。</typeparam>
     public readonly struct ConditionMatch<TEvent>
     {
-        /// <summary>Notification shared with matching subscribers; reference-type notifications must not be null.</summary>
+        /// <summary>一致した購読者間で共有する通知です。参照型の通知には null を指定できません。</summary>
         public TEvent Event { get; }
-        /// <summary>Existing, ordinary loaded scene hierarchy that subscribers may edit through their contexts.</summary>
+        /// <summary>購読者がコンテキストを通じて編集できる、読み込み済みの通常シーンにある既存の階層です。</summary>
         public GameObject Root { get; }
-        /// <summary>Creates a match value. The dispatcher validates successful matches after evaluation.</summary>
-        /// <param name="notification">Notification to deliver.</param>
-        /// <param name="transactionRoot">Root of the editable hierarchy; this does not snapshot the entire hierarchy.</param>
+        /// <summary>一致結果を作成します。一致した結果の妥当性は、評価後にディスパッチャーが確認します。</summary>
+        /// <param name="notification">配送する通知です。</param>
+        /// <param name="transactionRoot">編集可能な階層のルートです。階層全体の状態を複製するものではありません。</param>
         public ConditionMatch(TEvent notification, GameObject transactionRoot)
         { Event = notification; Root = transactionRoot; }
     }
 
-    /// <summary>Read-only input and cooperative deadline for one synchronous condition invocation.</summary>
-    /// <remarks>Use on the editor main thread during evaluation only; do not retain for later work.</remarks>
+    /// <summary>同期的な条件の1回の呼び出しで使う、読み取り専用の入力と協調的な期限です。</summary>
+    /// <remarks>評価中の Editor メインスレッドでだけ使ってください。後の処理のために保持しないでください。</remarks>
     public sealed class ConditionContext
     {
         private readonly string _id;
         private readonly long _start = Stopwatch.GetTimestamp();
         private bool _open = true;
-        /// <summary>Input change being evaluated.</summary>
+        /// <summary>評価対象の入力変更です。</summary>
         public EditorChange Change { get; }
-        /// <summary>Temporary batch number for deduplication; not a persistent identity.</summary>
+        /// <summary>重複排除に使う一時的なバッチ番号です。永続的な識別子ではありません。</summary>
         public long BatchId { get; }
-        /// <summary>Independent deadline captured when this invocation starts.</summary>
+        /// <summary>この呼び出しの開始時に保持した、個別の期限です。</summary>
         public TimeSpan TimeLimit { get; }
-        /// <summary>Time elapsed since this context was created.</summary>
+        /// <summary>このコンテキストの作成からの経過時間です。</summary>
         public TimeSpan Elapsed => TimeSpan.FromTicks((long)((Stopwatch.GetTimestamp() - _start)
             * (TimeSpan.TicksPerSecond / (double)Stopwatch.Frequency)));
         internal ConditionContext(EditorChange change, string id, TimeSpan limit)
         { Change = change; BatchId = EventDispatcher.BatchId; _id = id; TimeLimit = limit; }
-        /// <summary>Checks the editor thread, invocation lifetime, and cooperative deadline.</summary>
-        /// <exception cref="InvalidOperationException">Called on another thread or after evaluation ended.</exception>
-        /// <exception cref="ConditionDeadlineExceededException">Elapsed time has reached the invocation limit.</exception>
+        /// <summary>Editor のスレッド、呼び出しの有効期間、協調的な期限を確認します。</summary>
+        /// <exception cref="InvalidOperationException">別スレッド、または条件評価の終了後に呼び出した場合です。</exception>
+        /// <exception cref="ConditionDeadlineExceededException">経過時間が呼び出しの期限に達した場合です。</exception>
         public void CheckDeadline()
         {
             EventDispatcher.RequireMainThread();
@@ -156,109 +156,109 @@ namespace EditorEventHandlers.Editor
     }
 
     // Event handler: synchronous execution, with explicit completion and scoped edits.
-    /// <summary>Executes a synchronous handler and reports an explicit completion result.</summary>
-    /// <typeparam name="TEvent">Exact notification type supplied by its condition.</typeparam>
-    /// <remarks>Use context edit methods, and do not schedule delayed Unity edits or reenter the editor event loop.</remarks>
+    /// <summary>同期的にハンドラーを実行し、終了結果を明示して返します。</summary>
+    /// <typeparam name="TEvent">条件から渡される通知の型です。</typeparam>
+    /// <remarks>コンテキストの編集メソッドを使ってください。Unity の遅延編集の予約や、Editor のイベントループへの再入は行わないでください。</remarks>
     public interface IEventHandler<TEvent>
     {
-        /// <summary>Stable, nonblank identifier, unique among subscriptions for this notification type.</summary>
+        /// <summary>空白でない安定した識別子です。同じ通知型の購読内で一意にしてください。</summary>
         string Id { get; }
-        /// <summary>Handles the notification on the editor main thread within its independent deadline.</summary>
-        /// <param name="context">Notification, scoped editing methods, and invocation deadline.</param>
-        /// <returns>An explicit success, skip, failure, or cancellation result.</returns>
+        /// <summary>Editor のメインスレッドで、個別の期限内に通知を処理します。</summary>
+        /// <param name="context">通知、編集範囲を限定した編集メソッド、呼び出しの期限です。</param>
+        /// <returns>成功・スキップ・失敗・キャンセルのいずれかを明示した結果です。</returns>
         HandlerResult Execute(HandlerContext<TEvent> context);
     }
 
-    /// <summary>Explicit handler completion states. Unspecified is treated as a contract failure.</summary>
+    /// <summary>ハンドラーの明示的な終了状態です。Unspecified は実行契約違反として扱います。</summary>
     public enum HandlerStatus
     {
-        /// <summary>No explicit completion was reported.</summary>
+        /// <summary>終了状態が明示されていません。</summary>
         Unspecified,
-        /// <summary>The handler completed successfully.</summary>
+        /// <summary>ハンドラーが正常終了しました。</summary>
         Succeeded,
-        /// <summary>The handler declined the notification without tracked edits.</summary>
+        /// <summary>記録対象の編集を行わずに、ハンドラーが通知の処理をスキップしました。</summary>
         Skipped,
-        /// <summary>The handler failed; tracked edits are subject to rollback.</summary>
+        /// <summary>ハンドラーが失敗しました。記録した変更は復元の対象です。</summary>
         Failed,
-        /// <summary>The handler cancelled; tracked edits are subject to rollback.</summary>
+        /// <summary>ハンドラーがキャンセルしました。記録した変更は復元の対象です。</summary>
         Cancelled
     }
-    /// <summary>Completion state and optional explanation returned by a handler.</summary>
+    /// <summary>ハンドラーが返す終了状態と、省略可能な説明です。</summary>
     public readonly struct HandlerResult
     {
-        /// <summary>Explicit completion state; the default value is Unspecified.</summary>
+        /// <summary>明示的な終了状態です。既定値は Unspecified です。</summary>
         public HandlerStatus Status { get; }
-        /// <summary>Optional explanation; factory methods normalize null to an empty string.</summary>
+        /// <summary>省略可能な説明です。生成メソッドは null を空文字列に変換します。</summary>
         public string Message { get; }
         private HandlerResult(HandlerStatus status, string message)
         { Status = status; Message = message ?? string.Empty; }
-        /// <summary>Reports successful completion. Tracked edits are committed if all execution checks pass.</summary>
-        /// <returns>A successful result.</returns>
+        /// <summary>正常終了を報告します。実行後の確認をすべて通過した場合に、記録した変更を確定します。</summary>
+        /// <returns>成功を表す結果です。</returns>
         public static HandlerResult Success() => new HandlerResult(HandlerStatus.Succeeded, null);
-        /// <summary>Reports no work. A skip after tracked edits is treated as failure.</summary>
-        /// <param name="reason">Optional explanation.</param>
-        /// <returns>A skipped result.</returns>
+        /// <summary>処理を行わなかったことを報告します。記録対象の編集後にスキップすると失敗として扱います。</summary>
+        /// <param name="reason">省略可能な説明です。</param>
+        /// <returns>スキップを表す結果です。</returns>
         public static HandlerResult Skip(string reason = null) => new HandlerResult(HandlerStatus.Skipped, reason);
-        /// <summary>Reports failure; the dispatcher attempts tracked rollback and disables the subscription.</summary>
-        /// <param name="reason">Failure explanation; null becomes an empty string.</param>
-        /// <returns>A failed result.</returns>
+        /// <summary>失敗を報告します。ディスパッチャーは記録した変更の復元を試み、購読を無効化します。</summary>
+        /// <param name="reason">失敗理由です。null は空文字列に変換します。</param>
+        /// <returns>失敗を表す結果です。</returns>
         public static HandlerResult Failure(string reason) => new HandlerResult(HandlerStatus.Failed, reason);
-        /// <summary>Reports cancellation; the dispatcher attempts tracked rollback and disables the subscription.</summary>
-        /// <param name="reason">Optional explanation.</param>
-        /// <returns>A cancelled result.</returns>
+        /// <summary>キャンセルを報告します。ディスパッチャーは記録した変更の復元を試み、購読を無効化します。</summary>
+        /// <param name="reason">省略可能な説明です。</param>
+        /// <returns>キャンセルを表す結果です。</returns>
         public static HandlerResult Cancel(string reason = null) => new HandlerResult(HandlerStatus.Cancelled, reason);
     }
 
-    /// <summary>Cooperative handler deadline exceeded; it does not forcibly interrupt synchronous Unity code.</summary>
+    /// <summary>ハンドラーの協調的な期限を超過したことを示します。同期的な Unity コードを強制中断するものではありません。</summary>
     public sealed class HandlerDeadlineExceededException : TimeoutException
     {
         internal HandlerDeadlineExceededException(string id, TimeSpan limit)
             : base("Handler '" + id + "' exceeded its " + limit.TotalMilliseconds + " ms deadline.") { }
     }
-    /// <summary>Cooperative condition deadline exceeded; it does not forcibly interrupt synchronous Unity code.</summary>
+    /// <summary>条件の協調的な期限を超過したことを示します。同期的な Unity コードを強制中断するものではありません。</summary>
     public sealed class ConditionDeadlineExceededException : TimeoutException
     {
         internal ConditionDeadlineExceededException(string id, TimeSpan limit)
             : base("Condition '" + id + "' exceeded its " + limit.TotalMilliseconds + " ms deadline.") { }
     }
 
-    /// <summary>How one subscription combines condition results from the same input change.</summary>
+    /// <summary>同じ入力変更に対する条件結果を、1件の購読でどのように組み合わせるかを指定します。</summary>
     public enum SubscriptionMode
     {
-        /// <summary>One exact notification type.</summary>
+        /// <summary>完全一致で扱う1つの通知型です。</summary>
         Single,
-        /// <summary>All declared conditions must match the same editable root.</summary>
+        /// <summary>指定した全条件が一致し、同じ編集範囲のルートを返す必要があります。</summary>
         All,
-        /// <summary>The first matching declared condition supplies the notification and editable root.</summary>
+        /// <summary>指定順で最初に一致した条件の通知と編集範囲のルートを使います。</summary>
         Any
     }
 
-    /// <summary>Read-only subscription state and explicit removal token. Retained registrations remain strongly referenced.</summary>
+    /// <summary>読み取り専用の購読状態と、明示的な解除トークンです。解除するまで登録への強参照が維持されます。</summary>
     public sealed class EventSubscription : IDisposable
     {
         internal readonly IHandlerEntry Entry;
-        /// <summary>Identifier captured at registration.</summary>
+        /// <summary>登録時に保存した識別子です。</summary>
         public string Id { get; }
-        /// <summary>Handler payload type; CompositeEvent for an All or Any subscription.</summary>
+        /// <summary>ハンドラーへ渡す通知の型です。All または Any 購読では CompositeEvent です。</summary>
         public Type EventType { get; }
-        /// <summary>Combination mode captured at registration.</summary>
+        /// <summary>登録時に保存した条件の組み合わせ方です。</summary>
         public SubscriptionMode Mode { get; }
-        /// <summary>Immutable condition notification types, in declaration order.</summary>
+        /// <summary>指定順に並んだ、変更できない条件の通知型一覧です。</summary>
         public IReadOnlyList<Type> ConditionTypes { get; }
         internal TimeSpan ExecutionLimit;
-        /// <summary>Current user-configured limit; each invocation captures its starting value.</summary>
+        /// <summary>ユーザーが設定した現在の期限です。各呼び出しは開始時の値を保持します。</summary>
         public TimeSpan TimeLimit => ExecutionLimit;
-        /// <summary>Whether the subscription has been explicitly removed.</summary>
+        /// <summary>購読が明示的に解除されているかどうかです。</summary>
         public bool IsDisposed { get; internal set; }
-        /// <summary>Whether user settings and fault policy currently enable the subscription.</summary>
+        /// <summary>ユーザー設定と異常時の方針に基づき、現在この購読が有効かどうかです。</summary>
         public bool IsEnabled { get; internal set; }
-        /// <summary>Whether enabled, not disposed, and backed by every required active condition. Read on the editor main thread.</summary>
+        /// <summary>有効かつ未解除で、必要な全条件が有効かどうかです。Editor のメインスレッドで取得してください。</summary>
         public bool IsActive => !IsDisposed && IsEnabled && EventDispatcher.HasConditions(ConditionTypes);
-        /// <summary>Reason for disabling; initially empty for an enabled subscription.</summary>
+        /// <summary>無効化の理由です。有効な購読の初期値は空文字列です。</summary>
         public string DisabledReason { get; internal set; }
-        /// <summary>Most recent completion result; Unspecified before the first invocation.</summary>
+        /// <summary>直近の終了結果です。初回呼び出し前は Unspecified です。</summary>
         public HandlerResult LastResult { get; internal set; }
-        /// <summary>Most recent invocation duration, excluding transaction finalization; zero before first use.</summary>
+        /// <summary>直近の呼び出し時間です。変更の確定・復元にかかった時間は含みません。初回使用前はゼロです。</summary>
         public TimeSpan LastDuration { get; internal set; }
         internal EventSubscription(IHandlerEntry entry, Type eventType, string id, TimeSpan limit,
             SubscriptionMode mode, Type[] conditionTypes)
@@ -266,83 +266,83 @@ namespace EditorEventHandlers.Editor
             Entry = entry; EventType = eventType; Id = id; ExecutionLimit = limit;
             Mode = mode; ConditionTypes = Array.AsReadOnly(conditionTypes);
         }
-        /// <summary>Removes this subscription and releases its registration slot; repeated calls do nothing.</summary>
-        /// <exception cref="InvalidOperationException">Called outside the editor main thread.</exception>
+        /// <summary>この購読を解除して登録枠を解放します。繰り返し呼び出しても何もしません。</summary>
+        /// <exception cref="InvalidOperationException">Editor のメインスレッド以外で呼び出した場合です。</exception>
         public void Dispose() => EventDispatcher.Unsubscribe(this);
     }
 
-    /// <summary>Read-only condition state and explicit removal token. Removing it leaves subscriptions waiting.</summary>
+    /// <summary>読み取り専用の条件登録状態と、明示的な解除トークンです。条件を解除すると、その購読は待機状態になります。</summary>
     public sealed class ConditionRegistration : IDisposable
     {
         internal readonly IConditionEntry Entry;
-        /// <summary>Identifier captured at registration.</summary>
+        /// <summary>登録時に保存した識別子です。</summary>
         public string Id { get; }
-        /// <summary>Exact notification type produced by this condition.</summary>
+        /// <summary>この条件が生成する通知の型です。</summary>
         public Type EventType { get; }
-        /// <summary>Change categories captured at registration.</summary>
+        /// <summary>登録時に保存した変更の種類です。</summary>
         public EditorChangeKind Changes { get; }
         internal TimeSpan ExecutionLimit;
-        /// <summary>Current user-configured limit; each invocation captures its starting value.</summary>
+        /// <summary>ユーザーが設定した現在の期限です。各呼び出しは開始時の値を保持します。</summary>
         public TimeSpan TimeLimit => ExecutionLimit;
-        /// <summary>Whether the condition has been explicitly removed.</summary>
+        /// <summary>条件登録が明示的に解除されているかどうかです。</summary>
         public bool IsDisposed { get; internal set; }
-        /// <summary>Whether user settings and fault policy currently enable the condition.</summary>
+        /// <summary>ユーザー設定と異常時の方針に基づき、現在この条件が有効かどうかです。</summary>
         public bool IsEnabled { get; internal set; }
-        /// <summary>Reason for disabling; initially empty for an enabled condition.</summary>
+        /// <summary>無効化の理由です。有効な条件の初期値は空文字列です。</summary>
         public string DisabledReason { get; internal set; }
-        /// <summary>Most recent evaluation duration; zero before first evaluation.</summary>
+        /// <summary>直近の評価時間です。初回評価前はゼロです。</summary>
         public TimeSpan LastDuration { get; internal set; }
         internal ConditionRegistration(IConditionEntry entry, Type eventType, string id, EditorChangeKind changes, TimeSpan limit)
         { Entry = entry; EventType = eventType; Id = id; Changes = changes; ExecutionLimit = limit; }
-        /// <summary>Removes this condition and releases its slot without removing its subscribers; repeated calls do nothing.</summary>
-        /// <exception cref="InvalidOperationException">Called outside the editor main thread.</exception>
+        /// <summary>この条件を解除して登録枠を解放します。購読者は解除しません。繰り返し呼び出しても何もしません。</summary>
+        /// <exception cref="InvalidOperationException">Editor のメインスレッド以外で呼び出した場合です。</exception>
         public void Dispose() => EventDispatcher.Unregister(this);
     }
 
     // The entire public dispatcher facade: registration only; no public publish or dispatch method.
-    /// <summary>Main-thread registration facade. No public notification injection or policy override is exposed.</summary>
+    /// <summary>メインスレッドで使う登録 API の入口です。任意の通知の投入や実行ポリシーの変更を行う公開 API はありません。</summary>
     public static class EditorEvents
     {
-        /// <summary>Registers one condition for the exact notification type, within the combined registration limit.</summary>
-        /// <typeparam name="TEvent">Exact notification type.</typeparam>
-        /// <param name="condition">Read-only condition; its registration getters must be lightweight.</param>
-        /// <returns>A removal token and read-only condition state.</returns>
-        /// <exception cref="ArgumentNullException">The condition is null.</exception>
-        /// <exception cref="ArgumentException">The identifier or change flags are invalid, or this type already has a condition.</exception>
-        /// <exception cref="InvalidOperationException">Called outside the editor main thread or the registration limit has been reached.</exception>
-        /// <remarks>Getter exceptions propagate to the caller. Dropping the token does not unregister the condition.</remarks>
+        /// <summary>条件登録と購読の合計上限内で、指定した通知型に条件を1件登録します。</summary>
+        /// <typeparam name="TEvent">通知の型です。型は完全一致で扱います。</typeparam>
+        /// <param name="condition">読み取り専用の条件です。登録時に使うゲッターは軽量な処理にしてください。</param>
+        /// <returns>登録を解除するトークンと、読み取り専用の条件登録状態です。</returns>
+        /// <exception cref="ArgumentNullException">condition が null の場合です。</exception>
+        /// <exception cref="ArgumentException">識別子や変更フラグが無効、またはこの通知型にすでに条件が登録されている場合です。</exception>
+        /// <exception cref="InvalidOperationException">Editor のメインスレッド以外で呼び出した場合、または登録数が上限に達した場合です。</exception>
+        /// <remarks>ゲッターの例外は呼び出し元へ伝播します。トークンを手放しても条件登録は解除されません。</remarks>
         public static ConditionRegistration RegisterCondition<TEvent>(IEventCondition<TEvent> condition)
             => EventDispatcher.Register(condition);
-        /// <summary>Subscribes a synchronous handler; it waits while no active condition exists for this exact type.</summary>
-        /// <typeparam name="TEvent">Exact notification type.</typeparam>
-        /// <param name="handler">Handler with a lightweight identifier getter.</param>
-        /// <returns>A removal token and read-only subscription state.</returns>
-        /// <exception cref="ArgumentNullException">The handler is null.</exception>
-        /// <exception cref="ArgumentException">The identifier is blank or already subscribed for this notification type.</exception>
-        /// <exception cref="InvalidOperationException">Called outside the editor main thread or the registration limit has been reached.</exception>
-        /// <remarks>Identifier getter exceptions propagate. Dropping the token does not remove the subscription. Handler execution order is unspecified.</remarks>
+        /// <summary>同期的なハンドラーを購読登録します。同じ通知型の有効な条件がない間は待機します。</summary>
+        /// <typeparam name="TEvent">通知の型です。型は完全一致で扱います。</typeparam>
+        /// <param name="handler">識別子のゲッターが軽量なハンドラーです。</param>
+        /// <returns>購読を解除するトークンと、読み取り専用の購読状態です。</returns>
+        /// <exception cref="ArgumentNullException">ハンドラーが null の場合です。</exception>
+        /// <exception cref="ArgumentException">識別子が空白、または同じ通知型ですでに購読登録されている場合です。</exception>
+        /// <exception cref="InvalidOperationException">Editor のメインスレッド以外で呼び出した場合、または登録数が上限に達した場合です。</exception>
+        /// <remarks>識別子のゲッターの例外は呼び出し元へ伝播します。トークンを手放しても購読は解除されません。ハンドラー間の実行順は規定しません。</remarks>
         public static EventSubscription Subscribe<TEvent>(IEventHandler<TEvent> handler)
             => EventDispatcher.Subscribe(handler);
 
-        /// <summary>Subscribes when all declared conditions match the same input change and editable root.</summary>
-        /// <param name="handler">Synchronous composite handler with a stable identifier.</param>
-        /// <param name="eventTypes">One to 100 distinct, closed notification types in declaration order; copied at registration.</param>
-        /// <returns>A removal token and read-only subscription state.</returns>
-        /// <exception cref="ArgumentNullException">The handler or type array is null.</exception>
-        /// <exception cref="ArgumentException">Types or identifier are invalid, or the composite identifier is already registered.</exception>
-        /// <exception cref="InvalidOperationException">Called outside the editor main thread or the combined registration limit has been reached.</exception>
-        /// <remarks>Every required condition must be present and enabled. All required evaluations precede all handlers in a batch. Handler execution order is unspecified.</remarks>
+        /// <summary>指定した全条件が同じ入力変更に一致し、同じ編集範囲のルートを返す場合に処理する購読を登録します。</summary>
+        /// <param name="handler">安定した識別子を持つ、同期的な複合通知ハンドラーです。</param>
+        /// <param name="eventTypes">型引数が確定した、重複のない通知型を指定順に1〜100件渡します。登録時にコピーします。</param>
+        /// <returns>購読を解除するトークンと、読み取り専用の購読状態です。</returns>
+        /// <exception cref="ArgumentNullException">ハンドラーまたは型の配列が null の場合です。</exception>
+        /// <exception cref="ArgumentException">型一覧や識別子が無効、または複合購読の識別子がすでに登録されている場合です。</exception>
+        /// <exception cref="InvalidOperationException">Editor のメインスレッド以外で呼び出した場合、または条件登録と購読の合計が上限に達した場合です。</exception>
+        /// <remarks>必要な全条件が登録済みで有効である必要があります。バッチ内の全条件評価が終わってからハンドラーを実行します。ハンドラー間の実行順は規定しません。</remarks>
         public static EventSubscription SubscribeAll(IEventHandler<CompositeEvent> handler, Type[] eventTypes)
             => EventDispatcher.SubscribeComposite(handler, eventTypes, SubscriptionMode.All);
 
-        /// <summary>Subscribes when any declared condition matches the same input change.</summary>
-        /// <param name="handler">Synchronous composite handler with a stable identifier.</param>
-        /// <param name="eventTypes">One to 100 distinct, closed notification types in declaration order; copied at registration.</param>
-        /// <returns>A removal token and read-only subscription state.</returns>
-        /// <exception cref="ArgumentNullException">The handler or type array is null.</exception>
-        /// <exception cref="ArgumentException">Types or identifier are invalid, or the composite identifier is already registered.</exception>
-        /// <exception cref="InvalidOperationException">Called outside the editor main thread or the combined registration limit has been reached.</exception>
-        /// <remarks>Every required condition must be present and enabled. Evaluations do not short-circuit; result selection stops at the first match and exposes only that result. Handler execution order is unspecified.</remarks>
+        /// <summary>指定したいずれかの条件が同じ入力変更に一致した場合に処理する購読を登録します。</summary>
+        /// <param name="handler">安定した識別子を持つ、同期的な複合通知ハンドラーです。</param>
+        /// <param name="eventTypes">型引数が確定した、重複のない通知型を指定順に1〜100件渡します。登録時にコピーします。</param>
+        /// <returns>購読を解除するトークンと、読み取り専用の購読状態です。</returns>
+        /// <exception cref="ArgumentNullException">ハンドラーまたは型の配列が null の場合です。</exception>
+        /// <exception cref="ArgumentException">型一覧や識別子が無効、または複合購読の識別子がすでに登録されている場合です。</exception>
+        /// <exception cref="InvalidOperationException">Editor のメインスレッド以外で呼び出した場合、または条件登録と購読の合計が上限に達した場合です。</exception>
+        /// <remarks>必要な全条件が登録済みで有効である必要があります。評価は途中で省略しません。結果の選択は最初の一致で止まり、その結果だけを公開します。ハンドラー間の実行順は規定しません。</remarks>
         public static EventSubscription SubscribeAny(IEventHandler<CompositeEvent> handler, Type[] eventTypes)
             => EventDispatcher.SubscribeComposite(handler, eventTypes, SubscriptionMode.Any);
     }

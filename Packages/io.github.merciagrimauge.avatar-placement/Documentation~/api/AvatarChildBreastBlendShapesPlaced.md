@@ -12,7 +12,7 @@
 public sealed class AvatarChildBreastBlendShapesPlaced
 ```
 
-Name matching does not establish clothing identity or avatar compatibility. Edit Unity references through HandlerContext.
+名前の一致だけでは、衣装であることやアバターとの互換性を判断できません。Unity 参照の編集には HandlerContext を使ってください。
 
 公開コンストラクターはありません。
 
@@ -20,9 +20,9 @@ Name matching does not establish clothing identity or avatar compatibility. Edit
 
 | メンバー | 概要 |
 |---|---|
-| [public GameObject Avatar { get; }](#member-767b9e7fca4c) | Immediate parent avatar selected as the handler's editable root. |
-| [public GameObject PlacedObject { get; }](#member-ec42c4419a59) | Created or reparented direct child; need not be a Prefab instance. |
-| [public IReadOnlyList&lt;BreastBlendShape&gt; BreastBlendShapes { get; }](#member-f3f06144b0ae) | Read-only detection results; Unity references may change before a later handler uses them. |
+| [public GameObject Avatar { get; }](#member-767b9e7fca4c) | ハンドラーの編集範囲のルートとして選んだ、直上の親アバターです。 |
+| [public GameObject PlacedObject { get; }](#member-ec42c4419a59) | 作成または親を変更された直下の子オブジェクトです。Prefab インスタンスである必要はありません。 |
+| [public IReadOnlyList&lt;BreastBlendShape&gt; BreastBlendShapes { get; }](#member-f3f06144b0ae) | 読み取り専用の検出結果です。後続のハンドラーが使う前に Unity 参照の状態が変わる場合があります。 |
 
 <a id="member-767b9e7fca4c"></a>
 
@@ -32,7 +32,7 @@ Name matching does not establish clothing identity or avatar compatibility. Edit
 public GameObject Avatar { get; }
 ```
 
-Immediate parent avatar selected as the handler's editable root.
+ハンドラーの編集範囲のルートとして選んだ、直上の親アバターです。
 
 <a id="member-ec42c4419a59"></a>
 
@@ -42,7 +42,7 @@ Immediate parent avatar selected as the handler's editable root.
 public GameObject PlacedObject { get; }
 ```
 
-Created or reparented direct child; need not be a Prefab instance.
+作成または親を変更された直下の子オブジェクトです。Prefab インスタンスである必要はありません。
 
 <a id="member-f3f06144b0ae"></a>
 
@@ -52,7 +52,7 @@ Created or reparented direct child; need not be a Prefab instance.
 public IReadOnlyList<BreastBlendShape> BreastBlendShapes { get; }
 ```
 
-Read-only detection results; Unity references may change before a later handler uses them.
+読み取り専用の検出結果です。後続のハンドラーが使う前に Unity 参照の状態が変わる場合があります。
 
 ## 使用上の注意
 

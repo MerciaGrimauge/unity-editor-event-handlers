@@ -12,19 +12,19 @@ Unityのバージョン差を吸収する一時的なシーン識別子です。
 public readonly struct EditorSceneId : IEquatable<EditorSceneId>
 ```
 
-Do not persist across Unity sessions or domains. Comparisons do not check scene existence or loading.
+Unity のセッションやドメインをまたいで保存しないでください。比較時はシーンの存在や読み込み状態を確認しません。
 
 ## メンバー一覧
 
 | メンバー | 概要 |
 |---|---|
-| [public bool IsValid { get; }](#member-c16f2994c0cc) | Whether this is a non-default identity; the scene may no longer exist or be loaded. |
-| [public static EditorSceneId FromScene(UnityEngine.SceneManagement.Scene scene)](#member-31afd7b80345) | Captures a scene's identity on the editor main thread. Invalid scenes return default. |
-| [public bool Equals(EditorSceneId other)](#member-002f54545c97) | Compares complete identities without checking scene loading; any thread may compare. |
-| [public override bool Equals(object obj)](#member-c8ee11ffdb9d) | Overrides System.Object.Equals(object). |
-| [public override int GetHashCode()](#member-497956f98383) | Hash for temporary collections; not a unique or persistent scene identifier. |
-| [public static bool operator ==(EditorSceneId left, EditorSceneId right)](#member-7c888896ea70) | Compares identities for equality without checking scene existence or loading. |
-| [public static bool operator !=(EditorSceneId left, EditorSceneId right)](#member-0b5ae3601b50) | Compares identities for inequality without checking scene existence or loading. |
+| [public bool IsValid { get; }](#member-c16f2994c0cc) | 識別子が既定値以外かどうかです。シーンがすでに存在しない、または読み込み済みではない場合があります。 |
+| [public static EditorSceneId FromScene(UnityEngine.SceneManagement.Scene scene)](#member-31afd7b80345) | Editor のメインスレッドでシーンの識別子を取得します。無効なシーンなら default を返します。 |
+| [public bool Equals(EditorSceneId other)](#member-002f54545c97) | シーンの読み込み状態を確認せず、識別子全体を比較します。どのスレッドでも比較できます。 |
+| [public override bool Equals(object obj)](#member-c8ee11ffdb9d) | System.Object.Equals(object) をオーバーライドします。 |
+| [public override int GetHashCode()](#member-497956f98383) | 一時的なコレクションに使うハッシュ値です。一意または永続的なシーン識別子ではありません。 |
+| [public static bool operator ==(EditorSceneId left, EditorSceneId right)](#member-7c888896ea70) | シーンの存在や読み込み状態を確認せず、識別子が等しいか比較します。 |
+| [public static bool operator !=(EditorSceneId left, EditorSceneId right)](#member-0b5ae3601b50) | シーンの存在や読み込み状態を確認せず、識別子が異なるか比較します。 |
 
 <a id="member-c16f2994c0cc"></a>
 
@@ -34,7 +34,7 @@ Do not persist across Unity sessions or domains. Comparisons do not check scene 
 public bool IsValid { get; }
 ```
 
-Whether this is a non-default identity; the scene may no longer exist or be loaded.
+識別子が既定値以外かどうかです。シーンがすでに存在しない、または読み込み済みではない場合があります。
 
 <a id="member-31afd7b80345"></a>
 
@@ -44,23 +44,23 @@ Whether this is a non-default identity; the scene may no longer exist or be load
 public static EditorSceneId FromScene(UnityEngine.SceneManagement.Scene scene)
 ```
 
-Captures a scene's identity on the editor main thread. Invalid scenes return default.
+Editor のメインスレッドでシーンの識別子を取得します。無効なシーンなら default を返します。
 
 ### 引数
 
 | 名前 | 説明 |
 |---|---|
-| `scene` | Scene to identify. |
+| `scene` | 識別子を取得するシーンです。 |
 
 ### 戻り値
 
-Temporary identity, or default for an invalid scene.
+一時的な識別子です。無効なシーンなら default です。
 
 ### 例外
 
 | 型 | 発生条件 |
 |---|---|
-| `System.InvalidOperationException` | Called outside the editor main thread. |
+| `System.InvalidOperationException` | Editor のメインスレッド以外で呼び出した場合です。 |
 
 <a id="member-002f54545c97"></a>
 
@@ -70,17 +70,17 @@ Temporary identity, or default for an invalid scene.
 public bool Equals(EditorSceneId other)
 ```
 
-Compares complete identities without checking scene loading; any thread may compare.
+シーンの読み込み状態を確認せず、識別子全体を比較します。どのスレッドでも比較できます。
 
 ### 引数
 
 | 名前 | 説明 |
 |---|---|
-| `other` | Identity to compare. |
+| `other` | 比較対象の識別子です。 |
 
 ### 戻り値
 
-Whether both identities are equal.
+両方の識別子が等しいかどうかです。
 
 <a id="member-c8ee11ffdb9d"></a>
 
@@ -100,7 +100,7 @@ System.Object.Equals(object)をオーバーライドし、同じ識別子かを�
 public override int GetHashCode()
 ```
 
-Hash for temporary collections; not a unique or persistent scene identifier.
+一時的なコレクションに使うハッシュ値です。一意または永続的なシーン識別子ではありません。
 
 <a id="member-7c888896ea70"></a>
 
@@ -110,7 +110,7 @@ Hash for temporary collections; not a unique or persistent scene identifier.
 public static bool operator ==(EditorSceneId left, EditorSceneId right)
 ```
 
-Compares identities for equality without checking scene existence or loading.
+シーンの存在や読み込み状態を確認せず、識別子が等しいか比較します。
 
 <a id="member-0b5ae3601b50"></a>
 
@@ -120,14 +120,14 @@ Compares identities for equality without checking scene existence or loading.
 public static bool operator !=(EditorSceneId left, EditorSceneId right)
 ```
 
-Compares identities for inequality without checking scene existence or loading.
+シーンの存在や読み込み状態を確認せず、識別子が異なるか比較します。
 
 ## 使用上の注意
 
 `readonly struct : IEquatable<EditorSceneId>`。一時的なシーン識別子です。
 
 
-Resolveや生のhandleを読むAPIはありません。IsValid・比較・hashにはメインスレッド制約はありません。永続保存には使用しません。
+Resolveや生のhandleを読むAPIはありません。IsValid・比較・ハッシュ値の取得にはメインスレッド制約はありません。永続保存には使用しません。
 
 ## 関連資料
 

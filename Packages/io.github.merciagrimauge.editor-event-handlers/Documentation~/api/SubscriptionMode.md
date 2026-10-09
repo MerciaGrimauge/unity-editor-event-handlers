@@ -16,9 +16,9 @@ public enum SubscriptionMode
 
 | メンバー | 概要 |
 |---|---|
-| [Single](#member-5ac4effcc717) | One exact notification type. |
-| [All](#member-18134acabfe9) | All declared conditions must match the same editable root. |
-| [Any](#member-8ae40056d068) | The first matching declared condition supplies the notification and editable root. |
+| [Single](#member-5ac4effcc717) | 完全一致で扱う1つの通知型です。 |
+| [All](#member-18134acabfe9) | 指定した全条件が一致し、同じ編集範囲のルートを返す必要があります。 |
+| [Any](#member-8ae40056d068) | 指定順で最初に一致した条件の通知と編集範囲のルートを使います。 |
 
 <a id="member-5ac4effcc717"></a>
 
@@ -28,7 +28,7 @@ public enum SubscriptionMode
 Single
 ```
 
-One exact notification type.
+完全一致で扱う1つの通知型です。
 
 <a id="member-18134acabfe9"></a>
 
@@ -38,7 +38,7 @@ One exact notification type.
 All
 ```
 
-All declared conditions must match the same editable root.
+指定した全条件が一致し、同じ編集範囲のルートを返す必要があります。
 
 <a id="member-8ae40056d068"></a>
 
@@ -48,7 +48,7 @@ All declared conditions must match the same editable root.
 Any
 ```
 
-The first matching declared condition supplies the notification and editable root.
+指定順で最初に一致した条件の通知と編集範囲のルートを使います。
 
 ## 使用上の注意
 

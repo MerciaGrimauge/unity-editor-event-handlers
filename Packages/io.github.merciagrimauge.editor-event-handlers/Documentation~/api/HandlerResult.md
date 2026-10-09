@@ -16,12 +16,12 @@ public readonly struct HandlerResult
 
 | メンバー | 概要 |
 |---|---|
-| [public HandlerStatus Status { get; }](#member-03c844cc7f93) | Explicit completion state; the default value is Unspecified. |
-| [public string Message { get; }](#member-c9c6eea44821) | Optional explanation; factory methods normalize null to an empty string. |
-| [public static HandlerResult Success()](#member-913735074221) | Reports successful completion. Tracked edits are committed if all execution checks pass. |
-| [public static HandlerResult Skip(string reason = null)](#member-7c9e0dd7a368) | Reports no work. A skip after tracked edits is treated as failure. |
-| [public static HandlerResult Failure(string reason)](#member-63096106b7e3) | Reports failure; the dispatcher attempts tracked rollback and disables the subscription. |
-| [public static HandlerResult Cancel(string reason = null)](#member-69cac07e885f) | Reports cancellation; the dispatcher attempts tracked rollback and disables the subscription. |
+| [public HandlerStatus Status { get; }](#member-03c844cc7f93) | 明示的な終了状態です。既定値は Unspecified です。 |
+| [public string Message { get; }](#member-c9c6eea44821) | 省略可能な説明です。生成メソッドは null を空文字列に変換します。 |
+| [public static HandlerResult Success()](#member-913735074221) | 正常終了を報告します。実行後の確認をすべて通過した場合に、記録した変更を確定します。 |
+| [public static HandlerResult Skip(string reason = null)](#member-7c9e0dd7a368) | 処理を行わなかったことを報告します。記録対象の編集後にスキップすると失敗として扱います。 |
+| [public static HandlerResult Failure(string reason)](#member-63096106b7e3) | 失敗を報告します。ディスパッチャーは記録した変更の復元を試み、購読を無効化します。 |
+| [public static HandlerResult Cancel(string reason = null)](#member-69cac07e885f) | キャンセルを報告します。ディスパッチャーは記録した変更の復元を試み、購読を無効化します。 |
 
 <a id="member-03c844cc7f93"></a>
 
@@ -31,7 +31,7 @@ public readonly struct HandlerResult
 public HandlerStatus Status { get; }
 ```
 
-Explicit completion state; the default value is Unspecified.
+明示的な終了状態です。既定値は Unspecified です。
 
 <a id="member-c9c6eea44821"></a>
 
@@ -41,7 +41,7 @@ Explicit completion state; the default value is Unspecified.
 public string Message { get; }
 ```
 
-Optional explanation; factory methods normalize null to an empty string.
+省略可能な説明です。生成メソッドは null を空文字列に変換します。
 
 <a id="member-913735074221"></a>
 
@@ -51,11 +51,11 @@ Optional explanation; factory methods normalize null to an empty string.
 public static HandlerResult Success()
 ```
 
-Reports successful completion. Tracked edits are committed if all execution checks pass.
+正常終了を報告します。実行後の確認をすべて通過した場合に、記録した変更を確定します。
 
 ### 戻り値
 
-A successful result.
+成功を表す結果です。
 
 <a id="member-7c9e0dd7a368"></a>
 
@@ -65,17 +65,17 @@ A successful result.
 public static HandlerResult Skip(string reason = null)
 ```
 
-Reports no work. A skip after tracked edits is treated as failure.
+処理を行わなかったことを報告します。記録対象の編集後にスキップすると失敗として扱います。
 
 ### 引数
 
 | 名前 | 説明 |
 |---|---|
-| `reason` | Optional explanation. |
+| `reason` | 省略可能な説明です。 |
 
 ### 戻り値
 
-A skipped result.
+スキップを表す結果です。
 
 <a id="member-63096106b7e3"></a>
 
@@ -85,17 +85,17 @@ A skipped result.
 public static HandlerResult Failure(string reason)
 ```
 
-Reports failure; the dispatcher attempts tracked rollback and disables the subscription.
+失敗を報告します。ディスパッチャーは記録した変更の復元を試み、購読を無効化します。
 
 ### 引数
 
 | 名前 | 説明 |
 |---|---|
-| `reason` | Failure explanation; null becomes an empty string. |
+| `reason` | 失敗理由です。null は空文字列に変換します。 |
 
 ### 戻り値
 
-A failed result.
+失敗を表す結果です。
 
 <a id="member-69cac07e885f"></a>
 
@@ -105,24 +105,24 @@ A failed result.
 public static HandlerResult Cancel(string reason = null)
 ```
 
-Reports cancellation; the dispatcher attempts tracked rollback and disables the subscription.
+キャンセルを報告します。ディスパッチャーは記録した変更の復元を試み、購読を無効化します。
 
 ### 引数
 
 | 名前 | 説明 |
 |---|---|
-| `reason` | Optional explanation. |
+| `reason` | 省略可能な説明です。 |
 
 ### 戻り値
 
-A cancelled result.
+キャンセルを表す結果です。
 
 ## 使用上の注意
 
-HandlerStatusは `Unspecified = 0, Succeeded = 1, Skipped = 2, Failed = 3, Cancelled = 4` です。HandlerResultはreadonly structで、公開プロパティは `HandlerStatus Status`、`string Message` です。各factoryでnullの理由は空文字へ変換します。
+HandlerStatusは `Unspecified = 0, Succeeded = 1, Skipped = 2, Failed = 3, Cancelled = 4` です。HandlerResultは読み取り専用の構造体で、公開プロパティは `HandlerStatus Status`、`string Message` です。各生成メソッドは、理由が null の場合に空文字列へ変換します。
 
 
-ハンドラの例外・期限超過はFailureへ変換し、`OperationCanceledException` はCancelledへ変換します。復元が成功すれば次の購読を実行できます。復元・確定の例外、または実行後のRoot喪失では全体を即時停止します。
+ハンドラーの例外・期限超過はFailureへ変換し、`OperationCanceledException` はCancelledへ変換します。復元が成功すれば次の購読を実行できます。復元・確定の例外、または実行後のRoot喪失では全体を即時停止します。
 
 Successを返しても、実行後にRootが失われていればLastResultをFailureへ変更し、そのイベントハンドラーを異常無効として保存します。Context外で破壊されたRootの復元を意味しません。
 

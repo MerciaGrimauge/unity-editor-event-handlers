@@ -12,7 +12,7 @@
 public interface IEventHandler<TEvent>
 ```
 
-Use context edit methods, and do not schedule delayed Unity edits or reenter the editor event loop.
+コンテキストの編集メソッドを使ってください。Unity の遅延編集の予約や、Editor のイベントループへの再入は行わないでください。
 
 実装して登録するインターフェースです。
 
@@ -20,8 +20,8 @@ Use context edit methods, and do not schedule delayed Unity edits or reenter the
 
 | メンバー | 概要 |
 |---|---|
-| [string Id { get; }](#member-6358b7e39cbb) | Stable, nonblank identifier, unique among subscriptions for this notification type. |
-| [HandlerResult Execute(HandlerContext&lt;TEvent&gt; context)](#member-407370ebf925) | Handles the notification on the editor main thread within its independent deadline. |
+| [string Id { get; }](#member-6358b7e39cbb) | 空白でない安定した識別子です。同じ通知型の購読内で一意にしてください。 |
+| [HandlerResult Execute(HandlerContext&lt;TEvent&gt; context)](#member-407370ebf925) | Editor のメインスレッドで、個別の期限内に通知を処理します。 |
 
 <a id="member-6358b7e39cbb"></a>
 
@@ -31,7 +31,7 @@ Use context edit methods, and do not schedule delayed Unity edits or reenter the
 string Id { get; }
 ```
 
-Stable, nonblank identifier, unique among subscriptions for this notification type.
+空白でない安定した識別子です。同じ通知型の購読内で一意にしてください。
 
 <a id="member-407370ebf925"></a>
 
@@ -41,17 +41,17 @@ Stable, nonblank identifier, unique among subscriptions for this notification ty
 HandlerResult Execute(HandlerContext<TEvent> context)
 ```
 
-Handles the notification on the editor main thread within its independent deadline.
+Editor のメインスレッドで、個別の期限内に通知を処理します。
 
 ### 引数
 
 | 名前 | 説明 |
 |---|---|
-| `context` | Notification, scoped editing methods, and invocation deadline. |
+| `context` | 通知、編集範囲を限定した編集メソッド、呼び出しの期限です。 |
 
 ### 戻り値
 
-An explicit success, skip, failure, or cancellation result.
+成功・スキップ・失敗・キャンセルのいずれかを明示した結果です。
 
 ## 使用上の注意
 
@@ -60,16 +60,16 @@ async void、バックグラウンドでのUnity編集、終了後の遅延編�
 
 ### `HandlerStatus` / `HandlerResult`
 
-HandlerStatusは `Unspecified = 0, Succeeded = 1, Skipped = 2, Failed = 3, Cancelled = 4` です。HandlerResultはreadonly structで、公開プロパティは `HandlerStatus Status`、`string Message` です。各factoryでnullの理由は空文字へ変換します。
+HandlerStatusは `Unspecified = 0, Succeeded = 1, Skipped = 2, Failed = 3, Cancelled = 4` です。HandlerResultは読み取り専用の構造体で、公開プロパティは `HandlerStatus Status`、`string Message` です。各生成メソッドは、理由が null の場合に空文字列へ変換します。
 
 
-ハンドラの例外・期限超過はFailureへ変換し、`OperationCanceledException` はCancelledへ変換します。復元が成功すれば次の購読を実行できます。復元・確定の例外、または実行後のRoot喪失では全体を即時停止します。
+ハンドラーの例外・期限超過はFailureへ変換し、`OperationCanceledException` はCancelledへ変換します。復元が成功すれば次の購読を実行できます。復元・確定の例外、または実行後のRoot喪失では全体を即時停止します。
 
 Successを返しても、実行後にRootが失われていればLastResultをFailureへ変更し、そのイベントハンドラーを異常無効として保存します。Context外で破壊されたRootの復元を意味しません。
 
 ### `HandlerContext` / `HandlerContext<TEvent>`
 
-基底はabstract class、generic型はsealed classです。公開コンストラクターはなく、外部で継承・生成するための入口ではありません。generic型は以下の全APIに加え `TEvent Event` を提供します。
+基底型は抽象クラスで、ジェネリック型は継承できないクラスです。公開コンストラクターはなく、外部で継承・生成するための入口ではありません。ジェネリック型は以下の全APIに加え `TEvent Event` を提供します。
 
 
 対象はRootまたはその子階層のGameObject/Componentで、Rootと同じシーンにあり、永続アセットではない必要があります。Modifyのeditは記録したtargetのプロパティだけを変更し、作成・削除・親変更には専用APIを使います。別オブジェクトも変更する場合は個別にModifyしてください。

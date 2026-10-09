@@ -16,15 +16,15 @@
 
 | メンバー | 概要 |
 |---|---|
-| [None = 0](#member-84cb4ed6a844) | No category; cannot be registered as a condition's change mask. |
-| [Created = 1](#member-5f71f985ed09) | A GameObject hierarchy was created. |
-| [ParentChanged = 2](#member-cf96fa0396b0) | A GameObject's parent or scene changed. |
-| [PropertiesChanged = 4](#member-544472d517b9) | A GameObject or Component's properties changed. |
-| [StructureChanged = 8](#member-721160c562df) | A GameObject's Component structure changed. |
-| [HierarchyChanged = 16](#member-17b2ee79ed89) | A GameObject hierarchy's structure changed. |
-| [ChildrenReordered = 32](#member-500cfd21a724) | Children were reordered. |
-| [Destroyed = 64](#member-5f01b0e58280) | A GameObject hierarchy was destroyed. |
-| [PrefabUpdated = 128](#member-b38825d75834) | A prefab instance was updated. |
+| [None = 0](#member-84cb4ed6a844) | 変更の種類を指定しない値です。条件の変更フラグとしては登録できません。 |
+| [Created = 1](#member-5f71f985ed09) | GameObject の階層が作成されました。 |
+| [ParentChanged = 2](#member-cf96fa0396b0) | GameObject の親または所属シーンが変更されました。 |
+| [PropertiesChanged = 4](#member-544472d517b9) | GameObject または Component のプロパティが変更されました。 |
+| [StructureChanged = 8](#member-721160c562df) | GameObject のコンポーネント構成が変更されました。 |
+| [HierarchyChanged = 16](#member-17b2ee79ed89) | GameObject の階層構造が変更されました。 |
+| [ChildrenReordered = 32](#member-500cfd21a724) | 子オブジェクトの順序が変更されました。 |
+| [Destroyed = 64](#member-5f01b0e58280) | GameObject の階層が破棄されました。 |
+| [PrefabUpdated = 128](#member-b38825d75834) | Prefab インスタンスが更新されました。 |
 
 <a id="member-84cb4ed6a844"></a>
 
@@ -34,7 +34,7 @@
 None = 0
 ```
 
-No category; cannot be registered as a condition's change mask.
+変更の種類を指定しない値です。条件の変更フラグとしては登録できません。
 
 <a id="member-5f71f985ed09"></a>
 
@@ -44,7 +44,7 @@ No category; cannot be registered as a condition's change mask.
 Created = 1
 ```
 
-A GameObject hierarchy was created.
+GameObject の階層が作成されました。
 
 <a id="member-cf96fa0396b0"></a>
 
@@ -54,7 +54,7 @@ A GameObject hierarchy was created.
 ParentChanged = 2
 ```
 
-A GameObject's parent or scene changed.
+GameObject の親または所属シーンが変更されました。
 
 <a id="member-544472d517b9"></a>
 
@@ -64,7 +64,7 @@ A GameObject's parent or scene changed.
 PropertiesChanged = 4
 ```
 
-A GameObject or Component's properties changed.
+GameObject または Component のプロパティが変更されました。
 
 <a id="member-721160c562df"></a>
 
@@ -74,7 +74,7 @@ A GameObject or Component's properties changed.
 StructureChanged = 8
 ```
 
-A GameObject's Component structure changed.
+GameObject のコンポーネント構成が変更されました。
 
 <a id="member-17b2ee79ed89"></a>
 
@@ -84,7 +84,7 @@ A GameObject's Component structure changed.
 HierarchyChanged = 16
 ```
 
-A GameObject hierarchy's structure changed.
+GameObject の階層構造が変更されました。
 
 <a id="member-500cfd21a724"></a>
 
@@ -94,7 +94,7 @@ A GameObject hierarchy's structure changed.
 ChildrenReordered = 32
 ```
 
-Children were reordered.
+子オブジェクトの順序が変更されました。
 
 <a id="member-5f01b0e58280"></a>
 
@@ -104,7 +104,7 @@ Children were reordered.
 Destroyed = 64
 ```
 
-A GameObject hierarchy was destroyed.
+GameObject の階層が破棄されました。
 
 <a id="member-b38825d75834"></a>
 
@@ -114,7 +114,7 @@ A GameObject hierarchy was destroyed.
 PrefabUpdated = 128
 ```
 
-A prefab instance was updated.
+Prefab インスタンスが更新されました。
 
 ## 使用上の注意
 

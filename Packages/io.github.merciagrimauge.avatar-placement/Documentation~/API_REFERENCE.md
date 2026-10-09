@@ -1,6 +1,6 @@
-# Avatar Placement API reference
+# Avatar Placement APIリファレンス
 
-標準の条件プロバイダーが公開する通知型です。名前空間とアセンブリは`AvatarPlacement.Editor`、すべてEditor専用です。判定実装はinternalです。
+標準の条件プロバイダーが公開する通知型です。名前空間とアセンブリは`AvatarPlacement.Editor`、すべてEditor専用です。判定の実装は内部型です。
 
 | 型 | 通知・データ |
 |---|---|

@@ -12,25 +12,25 @@ Unity変更の種類・識別子・現在の対象参照です。
 public readonly struct EditorChange : IEquatable<EditorChange>
 ```
 
-Resolved Unity references expose current state for inspection; they may be null. This does not identify the user who caused a change.
+識別子から取得する Unity 参照は現在の状態の確認用で、null の場合があります。変更を起こしたユーザーを識別する情報ではありません。
 
 ## メンバー一覧
 
 | メンバー | 概要 |
 |---|---|
-| [public EditorChangeKind Kind { get; }](#member-8f625f1983eb) | The single category of the input notification. |
-| [public EditorObjectId ObjectId { get; }](#member-2ad54d145ab4) | Temporary identity of the notification's target. |
-| [public EditorSceneId SceneId { get; }](#member-f5e32bc32e9b) | Notification-time scene identity; for a parent change, the new scene. |
-| [public EditorSceneId PreviousSceneId { get; }](#member-c28d6fd26eca) | Previous scene for parent changes; the same as SceneId for destruction; otherwise default. |
-| [public EditorObjectId PreviousParentId { get; }](#member-5aaee8265f2f) | Previous parent for parent changes or last parent for destruction; otherwise default. |
-| [public EditorObjectId NewParentId { get; }](#member-b46e44022508) | New parent for parent changes; otherwise default. |
-| [public UnityEngine.Object Target { get; }](#member-74b60158dc49) | Resolves the current target on the editor main thread, or null if unavailable. |
-| [public GameObject GameObject { get; }](#member-b26a07e929b0) | Resolves the target GameObject, or a Component's owning GameObject, on the editor main thread; otherwise null. |
-| [public GameObject PreviousParent { get; }](#member-2376e7f1650f) | Resolves the previous parent's current GameObject on the editor main thread, or null. |
-| [public GameObject NewParent { get; }](#member-6b7440a7d128) | Resolves the new parent's current GameObject on the editor main thread, or null. |
-| [public bool Equals(EditorChange other)](#member-720334c64a6e) | Compares the category and all stored identities without resolving Unity objects. |
-| [public override bool Equals(object obj)](#member-7dad5a325d0e) | Overrides System.Object.Equals(object). |
-| [public override int GetHashCode()](#member-9df9da68d15f) | Hash of the category and all identities for temporary collections. |
+| [public EditorChangeKind Kind { get; }](#member-8f625f1983eb) | 入力通知の変更の種類です。 |
+| [public EditorObjectId ObjectId { get; }](#member-2ad54d145ab4) | 通知対象の一時的な識別子です。 |
+| [public EditorSceneId SceneId { get; }](#member-f5e32bc32e9b) | 通知時点のシーン識別子です。親変更の場合は新しい所属シーンです。 |
+| [public EditorSceneId PreviousSceneId { get; }](#member-c28d6fd26eca) | 親変更前の所属シーンです。破棄の場合は SceneId と同じ値、それ以外は default です。 |
+| [public EditorObjectId PreviousParentId { get; }](#member-5aaee8265f2f) | 親変更前の親、または破棄直前の親です。それ以外は default です。 |
+| [public EditorObjectId NewParentId { get; }](#member-b46e44022508) | 親変更時の新しい親です。それ以外は default です。 |
+| [public UnityEngine.Object Target { get; }](#member-74b60158dc49) | Editor のメインスレッドで現在の対象への参照を取得します。取得できない場合は null です。 |
+| [public GameObject GameObject { get; }](#member-b26a07e929b0) | Editor のメインスレッドで対象の GameObject、または対象 Component が属する GameObject を取得します。取得できない場合は null です。 |
+| [public GameObject PreviousParent { get; }](#member-2376e7f1650f) | Editor のメインスレッドで変更前の親の現在の GameObject を取得します。取得できない場合は null です。 |
+| [public GameObject NewParent { get; }](#member-6b7440a7d128) | Editor のメインスレッドで新しい親の現在の GameObject を取得します。取得できない場合は null です。 |
+| [public bool Equals(EditorChange other)](#member-720334c64a6e) | Unity オブジェクトへの参照を取得せず、変更の種類と保存した全識別子を比較します。 |
+| [public override bool Equals(object obj)](#member-7dad5a325d0e) | System.Object.Equals(object) をオーバーライドします。 |
+| [public override int GetHashCode()](#member-9df9da68d15f) | 一時的なコレクションに使う、変更の種類と全識別子のハッシュ値です。 |
 
 <a id="member-8f625f1983eb"></a>
 
@@ -40,7 +40,7 @@ Resolved Unity references expose current state for inspection; they may be null.
 public EditorChangeKind Kind { get; }
 ```
 
-The single category of the input notification.
+入力通知の変更の種類です。
 
 <a id="member-2ad54d145ab4"></a>
 
@@ -50,7 +50,7 @@ The single category of the input notification.
 public EditorObjectId ObjectId { get; }
 ```
 
-Temporary identity of the notification's target.
+通知対象の一時的な識別子です。
 
 <a id="member-f5e32bc32e9b"></a>
 
@@ -60,7 +60,7 @@ Temporary identity of the notification's target.
 public EditorSceneId SceneId { get; }
 ```
 
-Notification-time scene identity; for a parent change, the new scene.
+通知時点のシーン識別子です。親変更の場合は新しい所属シーンです。
 
 <a id="member-c28d6fd26eca"></a>
 
@@ -70,7 +70,7 @@ Notification-time scene identity; for a parent change, the new scene.
 public EditorSceneId PreviousSceneId { get; }
 ```
 
-Previous scene for parent changes; the same as SceneId for destruction; otherwise default.
+親変更前の所属シーンです。破棄の場合は SceneId と同じ値、それ以外は default です。
 
 <a id="member-5aaee8265f2f"></a>
 
@@ -80,7 +80,7 @@ Previous scene for parent changes; the same as SceneId for destruction; otherwis
 public EditorObjectId PreviousParentId { get; }
 ```
 
-Previous parent for parent changes or last parent for destruction; otherwise default.
+親変更前の親、または破棄直前の親です。それ以外は default です。
 
 <a id="member-b46e44022508"></a>
 
@@ -90,7 +90,7 @@ Previous parent for parent changes or last parent for destruction; otherwise def
 public EditorObjectId NewParentId { get; }
 ```
 
-New parent for parent changes; otherwise default.
+親変更時の新しい親です。それ以外は default です。
 
 <a id="member-74b60158dc49"></a>
 
@@ -100,13 +100,13 @@ New parent for parent changes; otherwise default.
 public UnityEngine.Object Target { get; }
 ```
 
-Resolves the current target on the editor main thread, or null if unavailable.
+Editor のメインスレッドで現在の対象への参照を取得します。取得できない場合は null です。
 
 ### 例外
 
 | 型 | 発生条件 |
 |---|---|
-| `System.InvalidOperationException` | Called outside the editor main thread. |
+| `System.InvalidOperationException` | Editor のメインスレッド以外で呼び出した場合です。 |
 
 <a id="member-b26a07e929b0"></a>
 
@@ -116,13 +116,13 @@ Resolves the current target on the editor main thread, or null if unavailable.
 public GameObject GameObject { get; }
 ```
 
-Resolves the target GameObject, or a Component's owning GameObject, on the editor main thread; otherwise null.
+Editor のメインスレッドで対象の GameObject、または対象 Component が属する GameObject を取得します。取得できない場合は null です。
 
 ### 例外
 
 | 型 | 発生条件 |
 |---|---|
-| `System.InvalidOperationException` | Called outside the editor main thread. |
+| `System.InvalidOperationException` | Editor のメインスレッド以外で呼び出した場合です。 |
 
 <a id="member-2376e7f1650f"></a>
 
@@ -132,13 +132,13 @@ Resolves the target GameObject, or a Component's owning GameObject, on the edito
 public GameObject PreviousParent { get; }
 ```
 
-Resolves the previous parent's current GameObject on the editor main thread, or null.
+Editor のメインスレッドで変更前の親の現在の GameObject を取得します。取得できない場合は null です。
 
 ### 例外
 
 | 型 | 発生条件 |
 |---|---|
-| `System.InvalidOperationException` | Called outside the editor main thread. |
+| `System.InvalidOperationException` | Editor のメインスレッド以外で呼び出した場合です。 |
 
 <a id="member-6b7440a7d128"></a>
 
@@ -148,13 +148,13 @@ Resolves the previous parent's current GameObject on the editor main thread, or 
 public GameObject NewParent { get; }
 ```
 
-Resolves the new parent's current GameObject on the editor main thread, or null.
+Editor のメインスレッドで新しい親の現在の GameObject を取得します。取得できない場合は null です。
 
 ### 例外
 
 | 型 | 発生条件 |
 |---|---|
-| `System.InvalidOperationException` | Called outside the editor main thread. |
+| `System.InvalidOperationException` | Editor のメインスレッド以外で呼び出した場合です。 |
 
 <a id="member-720334c64a6e"></a>
 
@@ -164,17 +164,17 @@ Resolves the new parent's current GameObject on the editor main thread, or null.
 public bool Equals(EditorChange other)
 ```
 
-Compares the category and all stored identities without resolving Unity objects.
+Unity オブジェクトへの参照を取得せず、変更の種類と保存した全識別子を比較します。
 
 ### 引数
 
 | 名前 | 説明 |
 |---|---|
-| `other` | Change to compare. |
+| `other` | 比較対象の変更です。 |
 
 ### 戻り値
 
-Whether every stored field is equal.
+保存した全フィールドが等しいかどうかです。
 
 <a id="member-7dad5a325d0e"></a>
 
@@ -194,7 +194,7 @@ System.Object.Equals(object)をオーバーライドし、同じ識別子かを�
 public override int GetHashCode()
 ```
 
-Hash of the category and all identities for temporary collections.
+一時的なコレクションに使う、変更の種類と全識別子のハッシュ値です。
 
 ## 使用上の注意
 

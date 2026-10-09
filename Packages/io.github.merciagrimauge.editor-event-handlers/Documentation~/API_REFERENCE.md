@@ -1,4 +1,4 @@
-# API reference
+# APIリファレンス
 
 Unity Editorで条件を登録し、型付き通知を購読するためのAPIです。型名からメンバー、引数、戻り値、例外を参照できます。すべてEditor専用です。
 
@@ -10,11 +10,11 @@ Unity Editorで条件を登録し、型付き通知を購読するためのAPI�
 
 ## 役割
 
-| 役割 | 英語名 | API・実装 |
-|---|---|---|
-| 条件プロバイダー | Condition Provider | `IEventCondition<TEvent>`を実装し、入力を判定して通知と編集範囲を返す |
-| イベントディスパッチャー | Event Dispatcher | 登録・判定結果の共有・配送・実行ポリシーを管理。公開入口は`EditorEvents`、内部実装は`EventDispatcher` |
-| イベントハンドラー | Event Handler | `IEventHandler<TEvent>`を実装し、通知を購読して処理結果を返す |
+| 役割 | API・実装 |
+|---|---|
+| 条件プロバイダー | `IEventCondition<TEvent>`を実装し、入力を判定して通知と編集範囲を返す |
+| イベントディスパッチャー | 登録・判定結果の共有・配送・実行ポリシーを管理。公開入口は`EditorEvents`、内部実装は`EventDispatcher` |
+| イベントハンドラー | `IEventHandler<TEvent>`を実装し、通知を購読して処理結果を返す |
 
 通知型と購読トークンは別の概念です。通知型は配送先を、トークンは登録の状態と解除を表します。ディスパッチャーは公開の継承・差し替え対象ではありません。
 

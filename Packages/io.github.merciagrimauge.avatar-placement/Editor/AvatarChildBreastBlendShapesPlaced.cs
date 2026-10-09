@@ -3,32 +3,32 @@ using UnityEngine;
 
 namespace AvatarPlacement.Editor
 {
-    /// <summary>One detected blend shape whose name contains breast, ignoring case.</summary>
-    /// <remarks>Renderer and Mesh are current Unity references. Recheck the mesh before using its captured index.</remarks>
+    /// <summary>大文字・小文字を区別せず、名前に breast を含むブレンドシェイプを1つ検出した結果です。</summary>
+    /// <remarks>Renderer と Mesh は現在の Unity オブジェクトへの参照です。保存したインデックスを使う前にメッシュを再確認してください。</remarks>
     public readonly struct BreastBlendShape
     {
-        /// <summary>Renderer using the detected shape; may later change or be destroyed.</summary>
+        /// <summary>検出したブレンドシェイプを使うレンダラーです。後で状態が変わったり破棄されたりする場合があります。</summary>
         public SkinnedMeshRenderer Renderer { get; }
-        /// <summary>Shared mesh at detection time; a Unity reference for inspection.</summary>
+        /// <summary>検出時の共有メッシュです。状態の確認に使う Unity 参照です。</summary>
         public Mesh Mesh { get; }
-        /// <summary>Blend shape index at detection time; mesh changes can invalidate its meaning.</summary>
+        /// <summary>検出時のブレンドシェイプのインデックスです。メッシュが変わると無効になる場合があります。</summary>
         public int Index { get; }
-        /// <summary>Blend shape name captured at detection time.</summary>
+        /// <summary>検出時に保存したブレンドシェイプ名です。</summary>
         public string Name { get; }
 
         internal BreastBlendShape(SkinnedMeshRenderer renderer, Mesh mesh, int index, string name)
         { Renderer = renderer; Mesh = mesh; Index = index; Name = name; }
     }
 
-    /// <summary>A direct child was created or reparented under an avatar and contained named breast blend shapes.</summary>
-    /// <remarks>Name matching does not establish clothing identity or avatar compatibility. Edit Unity references through HandlerContext.</remarks>
+    /// <summary>アバターの直下に作成または移動された子オブジェクトから、名前に breast を含むブレンドシェイプを検出した通知です。</summary>
+    /// <remarks>名前の一致だけでは、衣装であることやアバターとの互換性を判断できません。Unity 参照の編集には HandlerContext を使ってください。</remarks>
     public sealed class AvatarChildBreastBlendShapesPlaced
     {
-        /// <summary>Immediate parent avatar selected as the handler's editable root.</summary>
+        /// <summary>ハンドラーの編集範囲のルートとして選んだ、直上の親アバターです。</summary>
         public GameObject Avatar { get; }
-        /// <summary>Created or reparented direct child; need not be a Prefab instance.</summary>
+        /// <summary>作成または親を変更された直下の子オブジェクトです。Prefab インスタンスである必要はありません。</summary>
         public GameObject PlacedObject { get; }
-        /// <summary>Read-only detection results; Unity references may change before a later handler uses them.</summary>
+        /// <summary>読み取り専用の検出結果です。後続のハンドラーが使う前に Unity 参照の状態が変わる場合があります。</summary>
         public IReadOnlyList<BreastBlendShape> BreastBlendShapes { get; }
 
         internal AvatarChildBreastBlendShapesPlaced(GameObject avatar, GameObject placedObject, BreastBlendShape[] shapes)

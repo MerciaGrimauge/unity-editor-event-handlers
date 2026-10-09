@@ -18,15 +18,15 @@ public sealed class ConditionRegistration : IDisposable
 
 | メンバー | 概要 |
 |---|---|
-| [public string Id { get; }](#member-2f04af916893) | Identifier captured at registration. |
-| [public Type EventType { get; }](#member-42254476742f) | Exact notification type produced by this condition. |
-| [public EditorChangeKind Changes { get; }](#member-fcaf429032a1) | Change categories captured at registration. |
-| [public TimeSpan TimeLimit { get; }](#member-30d93ae2400a) | Current user-configured limit; each invocation captures its starting value. |
-| [public bool IsDisposed { get; }](#member-777c2705164a) | Whether the condition has been explicitly removed. |
-| [public bool IsEnabled { get; }](#member-c18aee63ed88) | Whether user settings and fault policy currently enable the condition. |
-| [public string DisabledReason { get; }](#member-cb89bf583b82) | Reason for disabling; initially empty for an enabled condition. |
-| [public TimeSpan LastDuration { get; }](#member-733c4dff35b9) | Most recent evaluation duration; zero before first evaluation. |
-| [public void Dispose()](#member-158e3eb82bbe) | Removes this condition and releases its slot without removing its subscribers; repeated calls do nothing. |
+| [public string Id { get; }](#member-2f04af916893) | 登録時に保存した識別子です。 |
+| [public Type EventType { get; }](#member-42254476742f) | この条件が生成する通知の型です。 |
+| [public EditorChangeKind Changes { get; }](#member-fcaf429032a1) | 登録時に保存した変更の種類です。 |
+| [public TimeSpan TimeLimit { get; }](#member-30d93ae2400a) | ユーザーが設定した現在の期限です。各呼び出しは開始時の値を保持します。 |
+| [public bool IsDisposed { get; }](#member-777c2705164a) | 条件登録が明示的に解除されているかどうかです。 |
+| [public bool IsEnabled { get; }](#member-c18aee63ed88) | ユーザー設定と異常時の方針に基づき、現在この条件が有効かどうかです。 |
+| [public string DisabledReason { get; }](#member-cb89bf583b82) | 無効化の理由です。有効な条件の初期値は空文字列です。 |
+| [public TimeSpan LastDuration { get; }](#member-733c4dff35b9) | 直近の評価時間です。初回評価前はゼロです。 |
+| [public void Dispose()](#member-158e3eb82bbe) | この条件を解除して登録枠を解放します。購読者は解除しません。繰り返し呼び出しても何もしません。 |
 
 <a id="member-2f04af916893"></a>
 
@@ -36,7 +36,7 @@ public sealed class ConditionRegistration : IDisposable
 public string Id { get; }
 ```
 
-Identifier captured at registration.
+登録時に保存した識別子です。
 
 <a id="member-42254476742f"></a>
 
@@ -46,7 +46,7 @@ Identifier captured at registration.
 public Type EventType { get; }
 ```
 
-Exact notification type produced by this condition.
+この条件が生成する通知の型です。
 
 <a id="member-fcaf429032a1"></a>
 
@@ -56,7 +56,7 @@ Exact notification type produced by this condition.
 public EditorChangeKind Changes { get; }
 ```
 
-Change categories captured at registration.
+登録時に保存した変更の種類です。
 
 <a id="member-30d93ae2400a"></a>
 
@@ -66,7 +66,7 @@ Change categories captured at registration.
 public TimeSpan TimeLimit { get; }
 ```
 
-Current user-configured limit; each invocation captures its starting value.
+ユーザーが設定した現在の期限です。各呼び出しは開始時の値を保持します。
 
 <a id="member-777c2705164a"></a>
 
@@ -76,7 +76,7 @@ Current user-configured limit; each invocation captures its starting value.
 public bool IsDisposed { get; }
 ```
 
-Whether the condition has been explicitly removed.
+条件登録が明示的に解除されているかどうかです。
 
 <a id="member-c18aee63ed88"></a>
 
@@ -86,7 +86,7 @@ Whether the condition has been explicitly removed.
 public bool IsEnabled { get; }
 ```
 
-Whether user settings and fault policy currently enable the condition.
+ユーザー設定と異常時の方針に基づき、現在この条件が有効かどうかです。
 
 <a id="member-cb89bf583b82"></a>
 
@@ -96,7 +96,7 @@ Whether user settings and fault policy currently enable the condition.
 public string DisabledReason { get; }
 ```
 
-Reason for disabling; initially empty for an enabled condition.
+無効化の理由です。有効な条件の初期値は空文字列です。
 
 <a id="member-733c4dff35b9"></a>
 
@@ -106,7 +106,7 @@ Reason for disabling; initially empty for an enabled condition.
 public TimeSpan LastDuration { get; }
 ```
 
-Most recent evaluation duration; zero before first evaluation.
+直近の評価時間です。初回評価前はゼロです。
 
 <a id="member-158e3eb82bbe"></a>
 
@@ -116,13 +116,13 @@ Most recent evaluation duration; zero before first evaluation.
 public void Dispose()
 ```
 
-Removes this condition and releases its slot without removing its subscribers; repeated calls do nothing.
+この条件を解除して登録枠を解放します。購読者は解除しません。繰り返し呼び出しても何もしません。
 
 ### 例外
 
 | 型 | 発生条件 |
 |---|---|
-| `System.InvalidOperationException` | Called outside the editor main thread. |
+| `System.InvalidOperationException` | Editor のメインスレッド以外で呼び出した場合です。 |
 
 ## 使用上の注意
 

@@ -18,10 +18,10 @@ public static class EditorEvents
 
 | メンバー | 概要 |
 |---|---|
-| [public static ConditionRegistration RegisterCondition&lt;TEvent&gt;(IEventCondition&lt;TEvent&gt; condition)](#member-71a21c90ff6e) | Registers one condition for the exact notification type, within the combined registration limit. |
-| [public static EventSubscription Subscribe&lt;TEvent&gt;(IEventHandler&lt;TEvent&gt; handler)](#member-95ae3c191f3d) | Subscribes a synchronous handler; it waits while no active condition exists for this exact type. |
-| [public static EventSubscription SubscribeAll(IEventHandler&lt;CompositeEvent&gt; handler, Type[] eventTypes)](#member-0bff08207ebc) | Subscribes when all declared conditions match the same input change and editable root. |
-| [public static EventSubscription SubscribeAny(IEventHandler&lt;CompositeEvent&gt; handler, Type[] eventTypes)](#member-faa7de1e9c83) | Subscribes when any declared condition matches the same input change. |
+| [public static ConditionRegistration RegisterCondition&lt;TEvent&gt;(IEventCondition&lt;TEvent&gt; condition)](#member-71a21c90ff6e) | 条件登録と購読の合計上限内で、指定した通知型に条件を1件登録します。 |
+| [public static EventSubscription Subscribe&lt;TEvent&gt;(IEventHandler&lt;TEvent&gt; handler)](#member-95ae3c191f3d) | 同期的なハンドラーを購読登録します。同じ通知型の有効な条件がない間は待機します。 |
+| [public static EventSubscription SubscribeAll(IEventHandler&lt;CompositeEvent&gt; handler, Type[] eventTypes)](#member-0bff08207ebc) | 指定した全条件が同じ入力変更に一致し、同じ編集範囲のルートを返す場合に処理する購読を登録します。 |
+| [public static EventSubscription SubscribeAny(IEventHandler&lt;CompositeEvent&gt; handler, Type[] eventTypes)](#member-faa7de1e9c83) | 指定したいずれかの条件が同じ入力変更に一致した場合に処理する購読を登録します。 |
 
 <a id="member-71a21c90ff6e"></a>
 
@@ -31,35 +31,35 @@ public static class EditorEvents
 public static ConditionRegistration RegisterCondition<TEvent>(IEventCondition<TEvent> condition)
 ```
 
-Registers one condition for the exact notification type, within the combined registration limit.
+条件登録と購読の合計上限内で、指定した通知型に条件を1件登録します。
 
 ### 型パラメーター
 
 | 名前 | 説明 |
 |---|---|
-| `TEvent` | Exact notification type. |
+| `TEvent` | 通知の型です。型は完全一致で扱います。 |
 
 ### 引数
 
 | 名前 | 説明 |
 |---|---|
-| `condition` | Read-only condition; its registration getters must be lightweight. |
+| `condition` | 読み取り専用の条件です。登録時に使うゲッターは軽量な処理にしてください。 |
 
 ### 戻り値
 
-A removal token and read-only condition state.
+登録を解除するトークンと、読み取り専用の条件登録状態です。
 
 ### 例外
 
 | 型 | 発生条件 |
 |---|---|
-| `System.ArgumentNullException` | The condition is null. |
-| `System.ArgumentException` | The identifier or change flags are invalid, or this type already has a condition. |
-| `System.InvalidOperationException` | Called outside the editor main thread or the registration limit has been reached. |
+| `System.ArgumentNullException` | condition が null の場合です。 |
+| `System.ArgumentException` | 識別子や変更フラグが無効、またはこの通知型にすでに条件が登録されている場合です。 |
+| `System.InvalidOperationException` | Editor のメインスレッド以外で呼び出した場合、または登録数が上限に達した場合です。 |
 
 ### 備考
 
-Getter exceptions propagate to the caller. Dropping the token does not unregister the condition.
+ゲッターの例外は呼び出し元へ伝播します。トークンを手放しても条件登録は解除されません。
 
 <a id="member-95ae3c191f3d"></a>
 
@@ -69,35 +69,35 @@ Getter exceptions propagate to the caller. Dropping the token does not unregiste
 public static EventSubscription Subscribe<TEvent>(IEventHandler<TEvent> handler)
 ```
 
-Subscribes a synchronous handler; it waits while no active condition exists for this exact type.
+同期的なハンドラーを購読登録します。同じ通知型の有効な条件がない間は待機します。
 
 ### 型パラメーター
 
 | 名前 | 説明 |
 |---|---|
-| `TEvent` | Exact notification type. |
+| `TEvent` | 通知の型です。型は完全一致で扱います。 |
 
 ### 引数
 
 | 名前 | 説明 |
 |---|---|
-| `handler` | Handler with a lightweight identifier getter. |
+| `handler` | 識別子のゲッターが軽量なハンドラーです。 |
 
 ### 戻り値
 
-A removal token and read-only subscription state.
+購読を解除するトークンと、読み取り専用の購読状態です。
 
 ### 例外
 
 | 型 | 発生条件 |
 |---|---|
-| `System.ArgumentNullException` | The handler is null. |
-| `System.ArgumentException` | The identifier is blank or already subscribed for this notification type. |
-| `System.InvalidOperationException` | Called outside the editor main thread or the registration limit has been reached. |
+| `System.ArgumentNullException` | ハンドラーが null の場合です。 |
+| `System.ArgumentException` | 識別子が空白、または同じ通知型ですでに購読登録されている場合です。 |
+| `System.InvalidOperationException` | Editor のメインスレッド以外で呼び出した場合、または登録数が上限に達した場合です。 |
 
 ### 備考
 
-Identifier getter exceptions propagate. Dropping the token does not remove the subscription. Handler execution order is unspecified.
+識別子のゲッターの例外は呼び出し元へ伝播します。トークンを手放しても購読は解除されません。ハンドラー間の実行順は規定しません。
 
 <a id="member-0bff08207ebc"></a>
 
@@ -107,30 +107,30 @@ Identifier getter exceptions propagate. Dropping the token does not remove the s
 public static EventSubscription SubscribeAll(IEventHandler<CompositeEvent> handler, Type[] eventTypes)
 ```
 
-Subscribes when all declared conditions match the same input change and editable root.
+指定した全条件が同じ入力変更に一致し、同じ編集範囲のルートを返す場合に処理する購読を登録します。
 
 ### 引数
 
 | 名前 | 説明 |
 |---|---|
-| `handler` | Synchronous composite handler with a stable identifier. |
-| `eventTypes` | One to 100 distinct, closed notification types in declaration order; copied at registration. |
+| `handler` | 安定した識別子を持つ、同期的な複合通知ハンドラーです。 |
+| `eventTypes` | 型引数が確定した、重複のない通知型を指定順に1〜100件渡します。登録時にコピーします。 |
 
 ### 戻り値
 
-A removal token and read-only subscription state.
+購読を解除するトークンと、読み取り専用の購読状態です。
 
 ### 例外
 
 | 型 | 発生条件 |
 |---|---|
-| `System.ArgumentNullException` | The handler or type array is null. |
-| `System.ArgumentException` | Types or identifier are invalid, or the composite identifier is already registered. |
-| `System.InvalidOperationException` | Called outside the editor main thread or the combined registration limit has been reached. |
+| `System.ArgumentNullException` | ハンドラーまたは型の配列が null の場合です。 |
+| `System.ArgumentException` | 型一覧や識別子が無効、または複合購読の識別子がすでに登録されている場合です。 |
+| `System.InvalidOperationException` | Editor のメインスレッド以外で呼び出した場合、または条件登録と購読の合計が上限に達した場合です。 |
 
 ### 備考
 
-Every required condition must be present and enabled. All required evaluations precede all handlers in a batch. Handler execution order is unspecified.
+必要な全条件が登録済みで有効である必要があります。バッチ内の全条件評価が終わってからハンドラーを実行します。ハンドラー間の実行順は規定しません。
 
 <a id="member-faa7de1e9c83"></a>
 
@@ -140,41 +140,41 @@ Every required condition must be present and enabled. All required evaluations p
 public static EventSubscription SubscribeAny(IEventHandler<CompositeEvent> handler, Type[] eventTypes)
 ```
 
-Subscribes when any declared condition matches the same input change.
+指定したいずれかの条件が同じ入力変更に一致した場合に処理する購読を登録します。
 
 ### 引数
 
 | 名前 | 説明 |
 |---|---|
-| `handler` | Synchronous composite handler with a stable identifier. |
-| `eventTypes` | One to 100 distinct, closed notification types in declaration order; copied at registration. |
+| `handler` | 安定した識別子を持つ、同期的な複合通知ハンドラーです。 |
+| `eventTypes` | 型引数が確定した、重複のない通知型を指定順に1〜100件渡します。登録時にコピーします。 |
 
 ### 戻り値
 
-A removal token and read-only subscription state.
+購読を解除するトークンと、読み取り専用の購読状態です。
 
 ### 例外
 
 | 型 | 発生条件 |
 |---|---|
-| `System.ArgumentNullException` | The handler or type array is null. |
-| `System.ArgumentException` | Types or identifier are invalid, or the composite identifier is already registered. |
-| `System.InvalidOperationException` | Called outside the editor main thread or the combined registration limit has been reached. |
+| `System.ArgumentNullException` | ハンドラーまたは型の配列が null の場合です。 |
+| `System.ArgumentException` | 型一覧や識別子が無効、または複合購読の識別子がすでに登録されている場合です。 |
+| `System.InvalidOperationException` | Editor のメインスレッド以外で呼び出した場合、または条件登録と購読の合計が上限に達した場合です。 |
 
 ### 備考
 
-Every required condition must be present and enabled. Evaluations do not short-circuit; result selection stops at the first match and exposes only that result. Handler execution order is unspecified.
+必要な全条件が登録済みで有効である必要があります。評価は途中で省略しません。結果の選択は最初の一致で止まり、その結果だけを公開します。ハンドラー間の実行順は規定しません。
 
 ## 使用上の注意
 
 
-登録時に実装の `Id` と、条件の `Changes` を読みます。そのgetterが投げた例外は呼び出し元へ伝播します。登録枠はgetterを呼ぶ前に予約し、失敗時に解放します。getter内の無限ループを強制停止する機構はありません。getterは定数相当の軽い処理にしてください。
+登録時に実装の `Id` と、条件の `Changes` を読みます。そのゲッターが投げた例外は呼び出し元へ伝播します。登録枠はゲッターを呼ぶ前に予約し、失敗時に解放します。ゲッター内の無限ループを強制停止する機構はありません。ゲッターは定数相当の軽い処理にしてください。
 
-上限は条件プロバイダーの条件とイベントハンドラーの購読の合計100件です。無効・待機中の登録、進行中の登録予約も含みます。上限到達時はgetterを読まず拒否します。条件1件と、それを購読するハンドラ2件なら3枠を使用します。Dispose後の枠は再利用できます。
+上限は条件プロバイダーの条件とイベントハンドラーの購読の合計100件です。無効・待機中の登録、進行中の登録予約も含みます。上限到達時はゲッターを読まず拒否します。条件1件と、それを購読するハンドラー2件なら3枠を使用します。Dispose後の枠は再利用できます。
 
 型の継承や同じ名前による通知の互換扱いはありません。`IEventCondition<BaseEvent>` は `IEventHandler<DerivedEvent>` を起動しません。型とIDは別の概念で、型が配送先、IDがその登録の設定・失敗記録の識別子です。
 
-複合購読は1件につき1枠です。依存する条件プロバイダーもそれぞれ1枠を使います。通知型一覧は1〜100型で、null要素・重複型・void・参照渡し型・ポインター型・未確定のgeneric型・`CompositeEvent`を拒否します。通知型一覧は登録時にコピーし、後から渡した配列を編集しても購読の条件は変わりません。AND/ORの混在や入れ子、過去入力との結合は扱いません。単一条件は`Subscribe<TEvent>`で購読します。
+複合購読は1件につき1枠です。依存する条件プロバイダーもそれぞれ1枠を使います。通知型一覧は1〜100型で、null要素・重複型・void・参照渡し型・ポインター型・未確定のジェネリック型・`CompositeEvent`を拒否します。通知型一覧は登録時にコピーし、後から渡した配列を編集しても購読の条件は変わりません。AND/ORの混在や入れ子、過去入力との結合は扱いません。単一条件は`Subscribe<TEvent>`で購読します。
 
 複合購読の通知型は `CompositeEvent` です。同じIDの複合購読は、モードや型一覧が異なっていても重複として拒否します。永続設定も `CompositeEvent` とIDで識別するため、解除後に条件構成だけを変えて同じIDで再登録すると設定を引き継ぎます。
 

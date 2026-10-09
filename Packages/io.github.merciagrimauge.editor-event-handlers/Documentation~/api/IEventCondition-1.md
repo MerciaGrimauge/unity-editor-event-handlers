@@ -12,7 +12,7 @@
 public interface IEventCondition<TEvent>
 ```
 
-Do not edit Unity objects, use asynchronous work, or reenter the editor event loop during evaluation.
+評価中は Unity オブジェクトの編集、非同期処理、Editor のイベントループへの再入を行わないでください。
 
 実装して登録するインターフェースです。
 
@@ -20,9 +20,9 @@ Do not edit Unity objects, use asynchronous work, or reenter the editor event lo
 
 | メンバー | 概要 |
 |---|---|
-| [string Id { get; }](#member-e3dfb9a780c3) | Stable, nonblank registration identifier. Its getter must be lightweight. |
-| [EditorChangeKind Changes { get; }](#member-01c05260a6b5) | Required supported change flags; None and unknown flags are rejected at registration. |
-| [bool TryMatch(ConditionContext context, out ConditionMatch&lt;TEvent&gt; match)](#member-e2fd46501259) | Evaluates the change on the editor main thread without editing it. |
+| [string Id { get; }](#member-e3dfb9a780c3) | 空白でない安定した登録識別子です。ゲッターは軽量な処理にしてください。 |
+| [EditorChangeKind Changes { get; }](#member-01c05260a6b5) | 評価対象の変更フラグです。None や未対応のフラグは登録時に拒否します。 |
+| [bool TryMatch(ConditionContext context, out ConditionMatch&lt;TEvent&gt; match)](#member-e2fd46501259) | Editor のメインスレッドで、対象を編集せずに変更を評価します。 |
 
 <a id="member-e3dfb9a780c3"></a>
 
@@ -32,7 +32,7 @@ Do not edit Unity objects, use asynchronous work, or reenter the editor event lo
 string Id { get; }
 ```
 
-Stable, nonblank registration identifier. Its getter must be lightweight.
+空白でない安定した登録識別子です。ゲッターは軽量な処理にしてください。
 
 <a id="member-01c05260a6b5"></a>
 
@@ -42,7 +42,7 @@ Stable, nonblank registration identifier. Its getter must be lightweight.
 EditorChangeKind Changes { get; }
 ```
 
-Required supported change flags; None and unknown flags are rejected at registration.
+評価対象の変更フラグです。None や未対応のフラグは登録時に拒否します。
 
 <a id="member-e2fd46501259"></a>
 
@@ -52,27 +52,27 @@ Required supported change flags; None and unknown flags are rejected at registra
 bool TryMatch(ConditionContext context, out ConditionMatch<TEvent> match)
 ```
 
-Evaluates the change on the editor main thread without editing it.
+Editor のメインスレッドで、対象を編集せずに変更を評価します。
 
 ### 引数
 
 | 名前 | 説明 |
 |---|---|
-| `context` | This invocation's input and independent deadline. |
-| `match` | Notification and editable hierarchy root when the return value is true. |
+| `context` | この呼び出しの入力と、個別の期限です。 |
+| `match` | 戻り値が true のときの通知と、編集可能な階層のルートです。 |
 
 ### 戻り値
 
-True for a match; false leaves the output unused.
+一致した場合は true です。false の場合、出力値は使いません。
 
 ## 使用上の注意
 
 
 条件は同期・読み取り専用です。Unity変更、直接Undo操作、非同期処理、モーダル表示、イベントループ再入を行わないでください。Unity参照を公開するため、読み取り専用性を強制するサンドボックスではありません。
 
-購読者のない条件は評価しません。入力変更1件・条件1件につき1回評価し、同じ結果を購読者へ共有します。全入力の条件評価が終わってからハンドラを実行します。falseの場合も戻った後に期限を確認します。例外・期限超過・不正な一致結果はその条件を無効化し、対応する購読は待機します。
+購読者のない条件は評価しません。入力変更1件・条件1件につき1回評価し、同じ結果を購読者へ共有します。全入力の条件評価が終わってからハンドラーを実行します。falseの場合も戻った後に期限を確認します。例外・期限超過・不正な一致結果はその条件を無効化し、対応する購読は待機します。
 
-通知値も複数の購読者で共有します。通知型はreadonly structや読み取り専用の一覧などで定義し、ハンドラへ必要な検出結果を渡してください。Unity参照の存続・状態は実行時に変わり得ます。
+通知値も複数の購読者で共有します。通知型は読み取り専用の構造体や読み取り専用の一覧などで定義し、ハンドラーへ必要な検出結果を渡してください。Unity参照の存続・状態は実行時に変わり得ます。
 
 ## 関連資料
 

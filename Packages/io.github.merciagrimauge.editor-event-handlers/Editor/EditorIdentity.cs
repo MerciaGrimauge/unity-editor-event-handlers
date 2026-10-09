@@ -12,20 +12,20 @@ using NativeSceneId = System.Int32;
 
 namespace EditorEventHandlers.Editor
 {
-    /// <summary>Opaque, temporary Unity object identity. Do not serialize or infer object state from it.</summary>
-    /// <remarks>Identities may be reused after destruction. Do not retain across Unity sessions or domains. Comparisons do not resolve objects.</remarks>
+    /// <summary>内部値を公開しない、一時的な Unity オブジェクト識別子です。シリアライズしたり、値からオブジェクトの状態を推測したりしないでください。</summary>
+    /// <remarks>破棄後に識別子が再利用される場合があります。Unity のセッションやドメインをまたいで保持しないでください。比較時はオブジェクトへの参照を取得しません。</remarks>
     public readonly struct EditorObjectId : IEquatable<EditorObjectId>
     {
         private readonly NativeObjectId _value;
         internal EditorObjectId(NativeObjectId value) { _value = value; }
 
-        /// <summary>Whether this is a non-default identity; the object may already have been destroyed.</summary>
+        /// <summary>識別子が既定値以外かどうかです。オブジェクトはすでに破棄されている場合があります。</summary>
         public bool IsValid => !_value.Equals(default(NativeObjectId));
 
-        /// <summary>Captures a live object's identity on the editor main thread. Null or destroyed objects return default.</summary>
-        /// <param name="target">Object to identify.</param>
-        /// <returns>Temporary identity, or default for null or a destroyed object.</returns>
-        /// <exception cref="InvalidOperationException">Called outside the editor main thread.</exception>
+        /// <summary>Editor のメインスレッドで存続しているオブジェクトの識別子を取得します。null または破棄済みなら default を返します。</summary>
+        /// <param name="target">識別子を取得するオブジェクトです。</param>
+        /// <returns>一時的な識別子です。null または破棄済みのオブジェクトなら default です。</returns>
+        /// <exception cref="InvalidOperationException">Editor のメインスレッド以外で呼び出した場合です。</exception>
         public static EditorObjectId FromObject(Object target)
         {
             EventDispatcher.RequireMainThread();
@@ -37,9 +37,9 @@ namespace EditorEventHandlers.Editor
 #endif
         }
 
-        /// <summary>Resolves the identity on the editor main thread. Returns null when it cannot be resolved.</summary>
-        /// <returns>Current Unity object, or null for default or an unavailable identity.</returns>
-        /// <exception cref="InvalidOperationException">Called outside the editor main thread.</exception>
+        /// <summary>Editor のメインスレッドで識別子からオブジェクトへの参照を取得します。取得できない場合は null を返します。</summary>
+        /// <returns>現在の Unity オブジェクトです。識別子が default または参照を取得できない場合は null です。</returns>
+        /// <exception cref="InvalidOperationException">Editor のメインスレッド以外で呼び出した場合です。</exception>
         public Object Resolve()
         {
             EventDispatcher.RequireMainThread();
@@ -51,48 +51,48 @@ namespace EditorEventHandlers.Editor
 #endif
         }
 
-        /// <summary>Compares complete identities without resolving Unity objects; any thread may compare.</summary>
-        /// <param name="other">Identity to compare.</param>
-        /// <returns>Whether both identities are equal.</returns>
+        /// <summary>Unity オブジェクトへの参照を取得せず、識別子全体を比較します。どのスレッドでも比較できます。</summary>
+        /// <param name="other">比較対象の識別子です。</param>
+        /// <returns>両方の識別子が等しいかどうかです。</returns>
         public bool Equals(EditorObjectId other) => _value.Equals(other._value);
         /// <inheritdoc />
         public override bool Equals(object obj) => obj is EditorObjectId other && Equals(other);
-        /// <summary>Hash for temporary collections; not a unique or persistent object identifier.</summary>
+        /// <summary>一時的なコレクションに使うハッシュ値です。一意または永続的なオブジェクト識別子ではありません。</summary>
         public override int GetHashCode() => _value.GetHashCode();
-        /// <summary>Compares identities for equality without resolving objects.</summary>
+        /// <summary>オブジェクトへの参照を取得せず、識別子が等しいか比較します。</summary>
         public static bool operator ==(EditorObjectId left, EditorObjectId right) => left.Equals(right);
-        /// <summary>Compares identities for inequality without resolving objects.</summary>
+        /// <summary>オブジェクトへの参照を取得せず、識別子が異なるか比較します。</summary>
         public static bool operator !=(EditorObjectId left, EditorObjectId right) => !left.Equals(right);
     }
 
-    /// <summary>Opaque, temporary Unity scene identity. Equality does not establish that a scene is loaded.</summary>
-    /// <remarks>Do not persist across Unity sessions or domains. Comparisons do not check scene existence or loading.</remarks>
+    /// <summary>内部値を公開しない、一時的な Unity シーン識別子です。値が等しくても、シーンが読み込み済みであるとは限りません。</summary>
+    /// <remarks>Unity のセッションやドメインをまたいで保存しないでください。比較時はシーンの存在や読み込み状態を確認しません。</remarks>
     public readonly struct EditorSceneId : IEquatable<EditorSceneId>
     {
         private readonly NativeSceneId _value;
         internal EditorSceneId(NativeSceneId value) { _value = value; }
-        /// <summary>Whether this is a non-default identity; the scene may no longer exist or be loaded.</summary>
+        /// <summary>識別子が既定値以外かどうかです。シーンがすでに存在しない、または読み込み済みではない場合があります。</summary>
         public bool IsValid => !_value.Equals(default(NativeSceneId));
-        /// <summary>Captures a scene's identity on the editor main thread. Invalid scenes return default.</summary>
-        /// <param name="scene">Scene to identify.</param>
-        /// <returns>Temporary identity, or default for an invalid scene.</returns>
-        /// <exception cref="InvalidOperationException">Called outside the editor main thread.</exception>
+        /// <summary>Editor のメインスレッドでシーンの識別子を取得します。無効なシーンなら default を返します。</summary>
+        /// <param name="scene">識別子を取得するシーンです。</param>
+        /// <returns>一時的な識別子です。無効なシーンなら default です。</returns>
+        /// <exception cref="InvalidOperationException">Editor のメインスレッド以外で呼び出した場合です。</exception>
         public static EditorSceneId FromScene(Scene scene)
         {
             EventDispatcher.RequireMainThread();
             return scene.IsValid() ? new EditorSceneId(scene.handle) : default;
         }
-        /// <summary>Compares complete identities without checking scene loading; any thread may compare.</summary>
-        /// <param name="other">Identity to compare.</param>
-        /// <returns>Whether both identities are equal.</returns>
+        /// <summary>シーンの読み込み状態を確認せず、識別子全体を比較します。どのスレッドでも比較できます。</summary>
+        /// <param name="other">比較対象の識別子です。</param>
+        /// <returns>両方の識別子が等しいかどうかです。</returns>
         public bool Equals(EditorSceneId other) => _value.Equals(other._value);
         /// <inheritdoc />
         public override bool Equals(object obj) => obj is EditorSceneId other && Equals(other);
-        /// <summary>Hash for temporary collections; not a unique or persistent scene identifier.</summary>
+        /// <summary>一時的なコレクションに使うハッシュ値です。一意または永続的なシーン識別子ではありません。</summary>
         public override int GetHashCode() => _value.GetHashCode();
-        /// <summary>Compares identities for equality without checking scene existence or loading.</summary>
+        /// <summary>シーンの存在や読み込み状態を確認せず、識別子が等しいか比較します。</summary>
         public static bool operator ==(EditorSceneId left, EditorSceneId right) => left.Equals(right);
-        /// <summary>Compares identities for inequality without checking scene existence or loading.</summary>
+        /// <summary>シーンの存在や読み込み状態を確認せず、識別子が異なるか比較します。</summary>
         public static bool operator !=(EditorSceneId left, EditorSceneId right) => !left.Equals(right);
     }
 }

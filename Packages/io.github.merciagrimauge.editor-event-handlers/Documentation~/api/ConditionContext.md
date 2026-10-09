@@ -12,7 +12,7 @@
 public sealed class ConditionContext
 ```
 
-Use on the editor main thread during evaluation only; do not retain for later work.
+評価中の Editor メインスレッドでだけ使ってください。後の処理のために保持しないでください。
 
 公開コンストラクターはありません。
 
@@ -20,11 +20,11 @@ Use on the editor main thread during evaluation only; do not retain for later wo
 
 | メンバー | 概要 |
 |---|---|
-| [public EditorChange Change { get; }](#member-db4f61621513) | Input change being evaluated. |
-| [public long BatchId { get; }](#member-62a4a3a7a4ed) | Temporary batch number for deduplication; not a persistent identity. |
-| [public TimeSpan TimeLimit { get; }](#member-2be2d9f3b629) | Independent deadline captured when this invocation starts. |
-| [public TimeSpan Elapsed { get; }](#member-989c9754c54b) | Time elapsed since this context was created. |
-| [public void CheckDeadline()](#member-802010a3c07f) | Checks the editor thread, invocation lifetime, and cooperative deadline. |
+| [public EditorChange Change { get; }](#member-db4f61621513) | 評価対象の入力変更です。 |
+| [public long BatchId { get; }](#member-62a4a3a7a4ed) | 重複排除に使う一時的なバッチ番号です。永続的な識別子ではありません。 |
+| [public TimeSpan TimeLimit { get; }](#member-2be2d9f3b629) | この呼び出しの開始時に保持した、個別の期限です。 |
+| [public TimeSpan Elapsed { get; }](#member-989c9754c54b) | このコンテキストの作成からの経過時間です。 |
+| [public void CheckDeadline()](#member-802010a3c07f) | Editor のスレッド、呼び出しの有効期間、協調的な期限を確認します。 |
 
 <a id="member-db4f61621513"></a>
 
@@ -34,7 +34,7 @@ Use on the editor main thread during evaluation only; do not retain for later wo
 public EditorChange Change { get; }
 ```
 
-Input change being evaluated.
+評価対象の入力変更です。
 
 <a id="member-62a4a3a7a4ed"></a>
 
@@ -44,7 +44,7 @@ Input change being evaluated.
 public long BatchId { get; }
 ```
 
-Temporary batch number for deduplication; not a persistent identity.
+重複排除に使う一時的なバッチ番号です。永続的な識別子ではありません。
 
 <a id="member-2be2d9f3b629"></a>
 
@@ -54,7 +54,7 @@ Temporary batch number for deduplication; not a persistent identity.
 public TimeSpan TimeLimit { get; }
 ```
 
-Independent deadline captured when this invocation starts.
+この呼び出しの開始時に保持した、個別の期限です。
 
 <a id="member-989c9754c54b"></a>
 
@@ -64,7 +64,7 @@ Independent deadline captured when this invocation starts.
 public TimeSpan Elapsed { get; }
 ```
 
-Time elapsed since this context was created.
+このコンテキストの作成からの経過時間です。
 
 <a id="member-802010a3c07f"></a>
 
@@ -74,14 +74,14 @@ Time elapsed since this context was created.
 public void CheckDeadline()
 ```
 
-Checks the editor thread, invocation lifetime, and cooperative deadline.
+Editor のスレッド、呼び出しの有効期間、協調的な期限を確認します。
 
 ### 例外
 
 | 型 | 発生条件 |
 |---|---|
-| `System.InvalidOperationException` | Called on another thread or after evaluation ended. |
-| `EditorEventHandlers.Editor.ConditionDeadlineExceededException` | Elapsed time has reached the invocation limit. |
+| `System.InvalidOperationException` | 別スレッド、または条件評価の終了後に呼び出した場合です。 |
+| `EditorEventHandlers.Editor.ConditionDeadlineExceededException` | 経過時間が呼び出しの期限に達した場合です。 |
 
 ## 使用上の注意
 

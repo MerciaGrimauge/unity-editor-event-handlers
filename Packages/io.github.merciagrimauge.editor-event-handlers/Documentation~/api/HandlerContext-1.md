@@ -20,7 +20,7 @@ public sealed class HandlerContext<TEvent> : HandlerContext
 
 | メンバー | 概要 |
 |---|---|
-| [public TEvent Event { get; }](#member-117f893247d0) | Condition result shared with subscribers; Unity references are for inspection. |
+| [public TEvent Event { get; }](#member-117f893247d0) | 購読者間で共有する条件の判定結果です。Unity 参照は状態の確認に使います。 |
 
 <a id="member-117f893247d0"></a>
 
@@ -30,7 +30,7 @@ public sealed class HandlerContext<TEvent> : HandlerContext
 public TEvent Event { get; }
 ```
 
-Condition result shared with subscribers; Unity references are for inspection.
+購読者間で共有する条件の判定結果です。Unity 参照は状態の確認に使います。
 
 ## 使用上の注意
 

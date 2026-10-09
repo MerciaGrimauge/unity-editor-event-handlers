@@ -18,18 +18,18 @@ public sealed class EventSubscription : IDisposable
 
 | メンバー | 概要 |
 |---|---|
-| [public string Id { get; }](#member-1bb8bf4ed03d) | Identifier captured at registration. |
-| [public Type EventType { get; }](#member-ad6c4d89651d) | Handler payload type; CompositeEvent for an All or Any subscription. |
-| [public SubscriptionMode Mode { get; }](#member-2a926cc77565) | Combination mode captured at registration. |
-| [public IReadOnlyList&lt;Type&gt; ConditionTypes { get; }](#member-27f4f9333f99) | Immutable condition notification types, in declaration order. |
-| [public TimeSpan TimeLimit { get; }](#member-856f94e40421) | Current user-configured limit; each invocation captures its starting value. |
-| [public bool IsDisposed { get; }](#member-df1809a6b779) | Whether the subscription has been explicitly removed. |
-| [public bool IsEnabled { get; }](#member-336e62e8fb71) | Whether user settings and fault policy currently enable the subscription. |
-| [public bool IsActive { get; }](#member-68eeaaf5b414) | Whether enabled, not disposed, and backed by every required active condition. Read on the editor main thread. |
-| [public string DisabledReason { get; }](#member-b64ca99fd124) | Reason for disabling; initially empty for an enabled subscription. |
-| [public HandlerResult LastResult { get; }](#member-9aba67b54815) | Most recent completion result; Unspecified before the first invocation. |
-| [public TimeSpan LastDuration { get; }](#member-ea8f72146cc0) | Most recent invocation duration, excluding transaction finalization; zero before first use. |
-| [public void Dispose()](#member-f6917fdae8ca) | Removes this subscription and releases its registration slot; repeated calls do nothing. |
+| [public string Id { get; }](#member-1bb8bf4ed03d) | 登録時に保存した識別子です。 |
+| [public Type EventType { get; }](#member-ad6c4d89651d) | ハンドラーへ渡す通知の型です。All または Any 購読では CompositeEvent です。 |
+| [public SubscriptionMode Mode { get; }](#member-2a926cc77565) | 登録時に保存した条件の組み合わせ方です。 |
+| [public IReadOnlyList&lt;Type&gt; ConditionTypes { get; }](#member-27f4f9333f99) | 指定順に並んだ、変更できない条件の通知型一覧です。 |
+| [public TimeSpan TimeLimit { get; }](#member-856f94e40421) | ユーザーが設定した現在の期限です。各呼び出しは開始時の値を保持します。 |
+| [public bool IsDisposed { get; }](#member-df1809a6b779) | 購読が明示的に解除されているかどうかです。 |
+| [public bool IsEnabled { get; }](#member-336e62e8fb71) | ユーザー設定と異常時の方針に基づき、現在この購読が有効かどうかです。 |
+| [public bool IsActive { get; }](#member-68eeaaf5b414) | 有効かつ未解除で、必要な全条件が有効かどうかです。Editor のメインスレッドで取得してください。 |
+| [public string DisabledReason { get; }](#member-b64ca99fd124) | 無効化の理由です。有効な購読の初期値は空文字列です。 |
+| [public HandlerResult LastResult { get; }](#member-9aba67b54815) | 直近の終了結果です。初回呼び出し前は Unspecified です。 |
+| [public TimeSpan LastDuration { get; }](#member-ea8f72146cc0) | 直近の呼び出し時間です。変更の確定・復元にかかった時間は含みません。初回使用前はゼロです。 |
+| [public void Dispose()](#member-f6917fdae8ca) | この購読を解除して登録枠を解放します。繰り返し呼び出しても何もしません。 |
 
 <a id="member-1bb8bf4ed03d"></a>
 
@@ -39,7 +39,7 @@ public sealed class EventSubscription : IDisposable
 public string Id { get; }
 ```
 
-Identifier captured at registration.
+登録時に保存した識別子です。
 
 <a id="member-ad6c4d89651d"></a>
 
@@ -49,7 +49,7 @@ Identifier captured at registration.
 public Type EventType { get; }
 ```
 
-Handler payload type; CompositeEvent for an All or Any subscription.
+ハンドラーへ渡す通知の型です。All または Any 購読では CompositeEvent です。
 
 <a id="member-2a926cc77565"></a>
 
@@ -59,7 +59,7 @@ Handler payload type; CompositeEvent for an All or Any subscription.
 public SubscriptionMode Mode { get; }
 ```
 
-Combination mode captured at registration.
+登録時に保存した条件の組み合わせ方です。
 
 <a id="member-27f4f9333f99"></a>
 
@@ -69,7 +69,7 @@ Combination mode captured at registration.
 public IReadOnlyList<Type> ConditionTypes { get; }
 ```
 
-Immutable condition notification types, in declaration order.
+指定順に並んだ、変更できない条件の通知型一覧です。
 
 <a id="member-856f94e40421"></a>
 
@@ -79,7 +79,7 @@ Immutable condition notification types, in declaration order.
 public TimeSpan TimeLimit { get; }
 ```
 
-Current user-configured limit; each invocation captures its starting value.
+ユーザーが設定した現在の期限です。各呼び出しは開始時の値を保持します。
 
 <a id="member-df1809a6b779"></a>
 
@@ -89,7 +89,7 @@ Current user-configured limit; each invocation captures its starting value.
 public bool IsDisposed { get; }
 ```
 
-Whether the subscription has been explicitly removed.
+購読が明示的に解除されているかどうかです。
 
 <a id="member-336e62e8fb71"></a>
 
@@ -99,7 +99,7 @@ Whether the subscription has been explicitly removed.
 public bool IsEnabled { get; }
 ```
 
-Whether user settings and fault policy currently enable the subscription.
+ユーザー設定と異常時の方針に基づき、現在この購読が有効かどうかです。
 
 <a id="member-68eeaaf5b414"></a>
 
@@ -109,7 +109,7 @@ Whether user settings and fault policy currently enable the subscription.
 public bool IsActive { get; }
 ```
 
-Whether enabled, not disposed, and backed by every required active condition. Read on the editor main thread.
+有効かつ未解除で、必要な全条件が有効かどうかです。Editor のメインスレッドで取得してください。
 
 <a id="member-b64ca99fd124"></a>
 
@@ -119,7 +119,7 @@ Whether enabled, not disposed, and backed by every required active condition. Re
 public string DisabledReason { get; }
 ```
 
-Reason for disabling; initially empty for an enabled subscription.
+無効化の理由です。有効な購読の初期値は空文字列です。
 
 <a id="member-9aba67b54815"></a>
 
@@ -129,7 +129,7 @@ Reason for disabling; initially empty for an enabled subscription.
 public HandlerResult LastResult { get; }
 ```
 
-Most recent completion result; Unspecified before the first invocation.
+直近の終了結果です。初回呼び出し前は Unspecified です。
 
 <a id="member-ea8f72146cc0"></a>
 
@@ -139,7 +139,7 @@ Most recent completion result; Unspecified before the first invocation.
 public TimeSpan LastDuration { get; }
 ```
 
-Most recent invocation duration, excluding transaction finalization; zero before first use.
+直近の呼び出し時間です。変更の確定・復元にかかった時間は含みません。初回使用前はゼロです。
 
 <a id="member-f6917fdae8ca"></a>
 
@@ -149,13 +149,13 @@ Most recent invocation duration, excluding transaction finalization; zero before
 public void Dispose()
 ```
 
-Removes this subscription and releases its registration slot; repeated calls do nothing.
+この購読を解除して登録枠を解放します。繰り返し呼び出しても何もしません。
 
 ### 例外
 
 | 型 | 発生条件 |
 |---|---|
-| `System.InvalidOperationException` | Called outside the editor main thread. |
+| `System.InvalidOperationException` | Editor のメインスレッド以外で呼び出した場合です。 |
 
 ## 使用上の注意
 

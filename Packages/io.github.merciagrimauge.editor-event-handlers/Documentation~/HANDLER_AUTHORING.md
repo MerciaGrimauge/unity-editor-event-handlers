@@ -2,6 +2,8 @@
 
 この資料は、条件プロバイダーの内部実装やイベントディスパッチャーのソースを読まずにイベントハンドラーを作るための入口です。イベントハンドラーは通知型を購読し、その通知を受けたときだけ同期処理します。条件プロバイダーは標準パッケージ・第三者パッケージ・自分のパッケージのいずれが提供しても同じ契約で接続できます。
 
+Unity オブジェクトの参照は、破棄済みの場合も含めて `== null` / `!= null` で確認します。`is null` との違いは[Unityオブジェクトのnull判定](CONTRACTS.md#unity-object-null)を参照してください。
+
 ## 使用する条件を選ぶ
 
 | 必要な入力 | 使用する通知型 / 購読 | 編集範囲 |
@@ -16,7 +18,7 @@
 
 `AvatarPlaced AND AvatarChildBreastBlendShapesPlaced`は「配置したアバター自身に胸シェイプがある」という条件にはなりません。前者はアバター自身の作成、後者は別対象の直下配置なので、同じ入力で一致する意味条件ではありません。その用途には「作成対象自身の胸シェイプ」を調べる別の条件プロバイダーが必要です。
 
-第三者の条件プロバイダーを購読するために必要なのは、公開通知型とそのアセンブリ、入力の意味、payloadの仕様、Rootの契約、登録方法です。条件プロバイダーのprivate/internalなクラスを参照しません。必要な情報が欠けていれば条件プロバイダーの作者へ契約の提供を求めます。型名・GameObject名・シェイプ名から意味を推測して埋めません。
+第三者の条件プロバイダーを購読するために必要なのは、公開通知型とそのアセンブリ、入力の意味、通知の値の仕様、Rootの契約、登録方法です。条件プロバイダーの非公開の内部クラスを参照しません。必要な情報が欠けていれば条件プロバイダーの作者へ契約の提供を求めます。型名・GameObject名・シェイプ名から意味を推測して埋めません。
 
 ## Editor用アセンブリを用意する
 
@@ -198,7 +200,7 @@ namespace Example.CompositeFeature.Editor
 }
 ```
 
-型一覧は空でない、重複のない1〜100型で指定します。`null`、`void`、byref、pointer、open generic、`CompositeEvent`は依存型にできません。入れ子のAND/OR式はありません。登録時に一覧をコピーするため、後から配列を変更しても登録内容は変わりません。
+型一覧は空でない、重複のない1〜100型で指定します。`null`、`void`、byref、pointer、open ジェネリック、`CompositeEvent`は依存型にできません。入れ子のAND/OR式はありません。登録時に一覧をコピーするため、後から配列を変更しても登録内容は変わりません。
 
 ANDは**同じ1入力での全一致**です。別の配置や別バッチの一致を蓄積しません。すべての条件プロバイダーが同じRootを返す必要があります。追加条件は「元の対象にどんな性質があるか」を同じ入力から判定する形にすると再利用できます。
 
@@ -273,9 +275,9 @@ ORの`TryGet<T>`で取得できるのは、宣言順で最初に一致した1型
 
 編集対象はRootとその子の同一シーンのGameObject/Componentだけです。Mesh、Material等のアセットをModifyする入口ではありません。Rootの削除・親変更、Transformの削除はできません。通知やcontextを保持して後から編集しません。直接Undo操作、遅延編集、モーダルUI、イベントループ再入を行いません。
 
-各条件プロバイダーとイベントハンドラーの期限は独立し、初期値・上限100 ms、利用者のUI設定範囲1〜100 msです。共有バッチ予算はありません。登録側は期限を変更・延長できません。管理側は戻った後にも期限を確認しますが、戻らない同期コードを強制killできません。
+各条件プロバイダーとイベントハンドラーの期限は独立し、初期値・上限100 ms、利用者のUI設定範囲1〜100 msです。共有バッチ予算はありません。登録側は期限を変更・延長できません。管理側は戻った後にも期限を確認しますが、戻らない同期コードを強制終了できません。
 
-ハンドラー間の実行順は公開契約に含めません。順序・優先度・順序の希望を指定するAPIはありません。イベントハンドラーは前後のイベントハンドラーの存在・正常終了・状態保存を前提にしません。条件プロバイダーのpayloadのUnity参照は共有され、完全な状態コピーではありません。
+ハンドラー間の実行順は公開契約に含めません。順序・優先度・順序の希望を指定するAPIはありません。イベントハンドラーは前後のイベントハンドラーの存在・正常終了・状態保存を前提にしません。条件プロバイダーの通知の値のUnity参照は共有され、完全な状態コピーではありません。
 
 復元対象はContextが追跡したUndo対応変更です。全アバターのメモリ保存ではありません。直接書き込み、外部ファイル、非シリアライズ状態、第三者Componentの副作用や遅延処理は対象外です。確定/復元の例外や実行後のRoot喪失では残りのバッチを即時停止します。Root喪失はイベントハンドラーがSuccessを返してもFailureと異常無効化になります。
 
@@ -309,7 +311,7 @@ MAの1.18.7を対象にした接続情報です。条件プロバイダーが渡
 
 MAは編集時に値をコピーし、ビルド時にアニメーションへ同期先のカーブを適用します。同期元→中間→同期先の連鎖同期、VRChat標準の視線/口パクによる正確な同期は対象外です。ビルド時にComponentを生成するNDMF拡張なら、公式の拡張案内に従いGeneratingでMAより前に生成します。Editor配置時のイベントハンドラーとは別の実行入口です。
 
-出典: [公式機能説明](https://modular-avatar.nadena.dev/docs/reference/blendshape-sync)、[1.18.7のComponent/Binding](https://github.com/bdunderscore/modular-avatar/blob/1.18.7/Runtime/ModularAvatarBlendshapeSync.cs)、[参照API](https://github.com/bdunderscore/modular-avatar/blob/1.18.7/Runtime/AvatarObjectReference.cs)、[NDMFからの拡張](https://modular-avatar.nadena.dev/docs/extending)。この節は実装手順と公開データの説明であり、完成したMA同期ハンドラやその動作検証ではありません。
+出典: [公式機能説明](https://modular-avatar.nadena.dev/docs/reference/blendshape-sync)、[1.18.7のComponent/Binding](https://github.com/bdunderscore/modular-avatar/blob/1.18.7/Runtime/ModularAvatarBlendshapeSync.cs)、[参照API](https://github.com/bdunderscore/modular-avatar/blob/1.18.7/Runtime/AvatarObjectReference.cs)、[NDMFからの拡張](https://modular-avatar.nadena.dev/docs/extending)。この節は実装手順と公開データの説明であり、完成したMA同期ハンドラーやその動作検証ではありません。
 
 ## イベントハンドラーを完成と判断する確認項目
 
@@ -328,4 +330,4 @@ MAは編集時に値をコピーし、ビルド時にアニメーションへ同
 
 この表は新しいイベントハンドラーに適用する確認項目です。掲載だけでそのイベントハンドラーを実行検証済みとは扱いません。イベントディスパッチャーと標準条件プロバイダーの検証範囲は[テストケース](../../../docs/TEST_CASES.md)にあります。
 
-全APIの引数・例外は[API reference](API_REFERENCE.md)、第三者の条件プロバイダーの追加方法は[条件プロバイダーの作成ガイド](CONDITION_AUTHORING.md)、その他の例は[実行契約](CONTRACTS.md)を参照してください。ライセンスは[MIT](../LICENSE)です。
+全APIの引数・例外は[APIリファレンス](API_REFERENCE.md)、第三者の条件プロバイダーの追加方法は[条件プロバイダーの作成ガイド](CONDITION_AUTHORING.md)、その他の例は[実行契約](CONTRACTS.md)を参照してください。ライセンスは[MIT](../LICENSE)です。

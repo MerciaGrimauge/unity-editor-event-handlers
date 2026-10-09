@@ -8,7 +8,7 @@
 
 | ID | 分類 | 入力・操作 | 期待動作 |
 |---|---|---|---|
-| REG-01 | ディスパッチャー | nullの条件 / ハンドラを登録 | ArgumentNullException |
+| REG-01 | ディスパッチャー | nullの条件 / ハンドラーを登録 | ArgumentNullException |
 | REG-02 | ディスパッチャー | 空・空白ID | ArgumentException、予約枠を解放 |
 | REG-03 | ディスパッチャー | Changes=None / 未知ビット | ArgumentException |
 | REG-04 | ディスパッチャー | 有効なChangesの組み合わせ | 登録し、その種類にだけ配送 |
@@ -18,9 +18,9 @@
 | REG-08 | ディスパッチャー | 型名が同じ別の型、基底/派生の通知型 | 厳密な型が異なる購読へ配送しない |
 | REG-09 | ディスパッチャー | 条件プロバイダーとイベントハンドラー合計100件、101件目 | 100件を保持し次の登録を拒否 |
 | REG-10 | ディスパッチャー | 無効・待機中の登録を含める | 上限の枠として数える |
-| REG-11 | ディスパッチャー | ID/Changes getter中に再登録 | 外側の予約も数えて上限を守る |
-| REG-12 | ディスパッチャー | 上限時にgetterが副作用を持つ | getterを読まず拒否 |
-| REG-13 | ディスパッチャー | getter例外 / 登録失敗後に別登録 | 例外伝播、予約解放、空き枠を利用可 |
+| REG-11 | ディスパッチャー | ID/Changes ゲッター中に再登録 | 外側の予約も数えて上限を守る |
+| REG-12 | ディスパッチャー | 上限時にゲッターが副作用を持つ | ゲッターを読まず拒否 |
+| REG-13 | ディスパッチャー | ゲッター例外 / 登録失敗後に別登録 | 例外伝播、予約解放、空き枠を利用可 |
 | REG-14 | ディスパッチャー | 条件/購読のDisposeと再Dispose | 登録解除・枠解放、2回目は無操作 |
 | REG-15 | ディスパッチャー | 別スレッドの登録/Dispose | InvalidOperationException |
 | REG-16 | ディスパッチャー | 条件なしで購読、後から条件登録 | 待機し、新しい通知から実行。過去を再送しない |
@@ -43,7 +43,7 @@
 | RUN-10 | ディスパッチャー | TryMatch=trueでnull参照型通知 / 無効Root | 条件プロバイダーを無効化 |
 | RUN-11 | ディスパッチャー | 値型通知のdefault | Root等が有効なら通知可能 |
 | RUN-12 | ディスパッチャー | 実行前にRoot破棄/移動/不適格化 | その通知を実行しない |
-| RUN-13 | ディスパッチャー | イベントハンドラーが条件プロバイダーのpayload中の参照を変更 | 後続イベントハンドラーは現在の参照状態を扱う。全階層コピーはない |
+| RUN-13 | ディスパッチャー | イベントハンドラーが条件プロバイダーの通知の値中の参照を変更 | 後続イベントハンドラーは現在の参照状態を扱う。全階層コピーはない |
 | RUN-14 | ディスパッチャー | バッチ内のBatchId、次バッチ | 同じバッチでは同値、次の処理バッチで更新 |
 
 ## 識別子とUnity入力
@@ -56,8 +56,8 @@
 | ID-04 | ディスパッチャー | 現存する同一/別対象 | equalityとhashを正しく比較 |
 | ID-05 | ディスパッチャー | ID取得後に対象破棄 | IDのIsValidは存続を表さずResolve不能となる |
 | ID-06 | ディスパッチャー | 比較/hash / 別スレッドFromObject・FromScene・Resolve | 比較/hashはUnity API不要、取得・解決は拒否 |
-| ID-07 | ディスパッチャー | public APIを列挙 | raw値、数値変換、外部host差し替え、任意発火がない |
-| SRC-01 | ディスパッチャー | Created/ParentChanged/Properties/Structure/Hierarchy/ChildrenReordered/Destroyed/PrefabUpdated | 各native通知を公開Kindとopaque IDへ変換 |
+| ID-07 | ディスパッチャー | 公開APIを列挙 | raw値、数値変換、外部host差し替え、任意発火がない |
+| SRC-01 | ディスパッチャー | Created/ParentChanged/Properties/Structure/Hierarchy/ChildrenReordered/Destroyed/PrefabUpdated | 各ネイティブ通知を公開Kindと内部値を公開しない識別子へ変換 |
 | SRC-02 | ディスパッチャー | ParentChanged | 前後の親・シーンを保存 |
 | SRC-03 | ディスパッチャー | Destroyed | 最後の親、SceneIdと同値のPreviousSceneIdを保存 |
 | SRC-04 | ディスパッチャー | 複数Prefab更新対象 | 対象ごとに入力を生成 |
@@ -90,11 +90,11 @@
 | TX-16 | ディスパッチャー | 読み取りだけのイベントハンドラー、変更なしSkip | Undo追跡用コレクションを生成しない |
 | TX-17 | ディスパッチャー | 確定/復元自体が例外 | global halt、残りの購読・通知を即時打ち切り |
 | TX-18 | ディスパッチャー | イベントハンドラーがContext外でRootを破壊しSuccessを返す | LastResultをFailureへ変更し、イベントハンドラーを異常無効として保存。global halt。直接編集の復元は対象外 |
-| TX-19 | ディスパッチャー | global halt後の追加バッチ | 条件評価前に戻る |
-| TX-20 | ディスパッチャー | halt後のドメインリロード/再起動 | メモリ上のhaltは解除、失敗無効化は別の寿命で保持 |
+| TX-19 | ディスパッチャー | 全体停止後の追加バッチ | 条件評価前に戻る |
+| TX-20 | ディスパッチャー | halt後のドメインリロード/再起動 | メモリ上の全体停止は解除、失敗無効化は別の寿命で保持 |
 | TX-21 | ディスパッチャー | 直接書き込み/外部ファイル/非シリアライズ状態/Component副作用 | Context復元の対象外として扱う |
 
-無限ループの強制killは実装しません。制御が戻らないコードを同じUnityプロセス内で実行しても、deadlineによる停止を確認できません。
+無限ループの強制終了は実装しません。制御が戻らないコードを同じUnityプロセス内で実行しても、deadlineによる停止を確認できません。
 
 ## 標準条件とAAO購読
 
@@ -162,15 +162,15 @@
 | CMP-18 | ディスパッチャー | 入力配列を登録後に変更 | ConditionTypes/RequiredTypesと選択順は変わらない |
 | CMP-19 | ディスパッチャー | ConditionTypes/RequiredTypesを通常のAPIで書き換える | 読み取り専用で書き換え不可 |
 | CMP-20 | ディスパッチャー | 型一覧null、空、101型 | nullはArgumentNullException、他はArgumentException |
-| CMP-21 | ディスパッチャー | null要素、重複型、void、byref、pointer、open generic、CompositeEvent | ArgumentException。予約枠を漏らさない |
+| CMP-21 | ディスパッチャー | null要素、重複型、void、byref、pointer、open ジェネリック、CompositeEvent | ArgumentException。予約枠を漏らさない |
 | CMP-22 | ディスパッチャー | 同じIDのAll/Any、構成が異なる同じID | CompositeEvent購読として重複を拒否 |
 | CMP-23 | ディスパッチャー | 単一の通常通知型と複合購読で同じID | 通知型が異なるので別登録として扱う |
-| CMP-24 | ディスパッチャー | 1型だけのAll/Any | 複合payloadでその型を取得。1購読枠 |
+| CMP-24 | ディスパッチャー | 1型だけのAll/Any | 複合通知の値でその型を取得。1購読枠 |
 | CMP-25 | ディスパッチャー | 複合購読の状態トークン | EventType=CompositeEvent、ModeとConditionTypesを公開 |
 | CMP-26 | ディスパッチャー | 購読者がいない条件プロバイダー、待機中複合購読だけが要求する条件プロバイダー | 不要な評価/入力購読をしない |
 | CMP-27 | ディスパッチャー | 無効・待機を含む条件プロバイダーとイベントハンドラー合計100件 | 複合購読も1枠として上限を守る。解除済みは枠を解放 |
 | CMP-28 | ディスパッチャー | 複合イベントハンドラーがFailure/Cancel/期限超過 | 通常イベントハンドラーと同じ期限・復元・異常無効化 |
-| CMP-29 | ディスパッチャー | 全バッチ評価中にイベントハンドラー向けpayloadを取得 | イベントハンドラー実行前に全条件の評価を完了し、Unity状態の全コピーはしない |
+| CMP-29 | ディスパッチャー | 全バッチ評価中にイベントハンドラー向け通知の値を取得 | イベントハンドラー実行前に全条件の評価を完了し、Unity状態の全コピーはしない |
 
 ## 異常無効化の永続保存
 
@@ -187,12 +187,12 @@
 | PST-09 | イベントディスパッチャー/UI | 有効化後に同じ登録を解除・再登録/再起動 | 古いSessionStateから異常が復活しない |
 | PST-10 | ディスパッチャー | プロジェクト・登録種別・型・IDを変更 | 別設定として扱う |
 | PST-11 | ディスパッチャー | 複合購読のモード/型一覧だけを変更し同じIDで再登録 | CompositeEventとIDが同じなので設定・異常を引き継ぐ |
-| PST-12 | ディスパッチャー | global halt後にドメインリロード/再起動 | haltは解除、各登録の異常無効化は引き続き保持 |
+| PST-12 | ディスパッチャー | 全体停止後にドメインリロード/再起動 | 全体停止は解除、各登録の異常無効化は引き続き保持 |
 
 ## 検証範囲
 
-Unity 2022.3.22f1と6000.6.0f1のSDKなし共通ライブラリで、現行APIについて各66 assertionが成功しています。順序指定APIの不在、単一/AND/OR配送、結果共有、依存失効、登録上限、Root喪失時の打ち切りを確認しています。ガイドの実装例6件も両バージョンの参照ライブラリでコンパイル確認済みです。
+Unity 2022.3.22f1と6000.6.0f1のSDKなし共通ライブラリで、現行APIについてそれぞれ66件の検証に成功しています。順序指定APIの不在、単一/AND/OR配送、結果共有、依存失効、登録上限、Root喪失時の打ち切りを確認しています。ガイドの実装例6件も両バージョンの参照ライブラリでコンパイル確認済みです。
 
 この結果はすべてのテストケースを実行済みという意味ではありません。Unity 6でSDKを含むアバター検出・AAO連携、実際のGUI操作、SDKアップロード、すべての入力種類と型一覧拒否・保存範囲の組み合わせは未検証です。制御を返さない処理の強制終了は対象外です。
 
-[API reference](../Packages/io.github.merciagrimauge.editor-event-handlers/Documentation~/API_REFERENCE.md) / [実装の構成](ARCHITECTURE.md)
+[APIリファレンス](../Packages/io.github.merciagrimauge.editor-event-handlers/Documentation~/API_REFERENCE.md) / [実装の構成](ARCHITECTURE.md)
