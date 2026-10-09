@@ -6,7 +6,7 @@ using Object = UnityEngine.Object;
 
 namespace EditorEventHandlers.Editor
 {
-    // A new member must also be listed in EventDispatcher.Kinds and translated by UnityChangeSource.
+    // 種類を追加する場合は EventDispatcher.Kinds にも登録し、UnityChangeSource で変換します。
     /// <summary>対応する Unity 変更の種類です。条件はフラグを組み合わせて指定します。各入力変更は1種類です。</summary>
     [Flags]
     public enum EditorChangeKind
@@ -31,8 +31,8 @@ namespace EditorEventHandlers.Editor
         PrefabUpdated = 128
     }
 
-    // Snapshot of the native notification. References resolve at evaluation time and may be null.
-    // For Destroyed, PreviousSceneId repeats SceneId and PreviousParentId is the last parent.
+    // Unity 通知の情報を保持します。参照は評価時に取得し、null の場合があります。
+    // Destroyed の PreviousSceneId は SceneId と同じ値、PreviousParentId は破棄直前の親です。
     /// <summary>Unity の変更通知から保存した、変更の種類と一時的な識別子です。</summary>
     /// <remarks>識別子から取得する Unity 参照は現在の状態の確認用で、null の場合があります。変更を起こしたユーザーを識別する情報ではありません。</remarks>
     public readonly struct EditorChange : IEquatable<EditorChange>
@@ -65,6 +65,13 @@ namespace EditorEventHandlers.Editor
         /// <exception cref="InvalidOperationException">Editor のメインスレッド以外で呼び出した場合です。</exception>
         public GameObject NewParent => NewParentId.Resolve() as GameObject;
 
+        /// <summary>Unity の通知時点の種類と識別子を保持します。現在のオブジェクト状態は複製しません。</summary>
+        /// <param name="kind">通知時点の変更の種類です。</param>
+        /// <param name="id">通知対象の一時的なオブジェクト識別子です。</param>
+        /// <param name="scene">通知時点または一致結果の保存時点のシーン識別子です。</param>
+        /// <param name="previousScene">親変更前のシーン識別子です。破棄入力では破棄直前のシーン、それ以外の入力では既定値です。</param>
+        /// <param name="previousParent">親変更前または破棄直前の親識別子です。</param>
+        /// <param name="newParent">親変更後の親識別子です。</param>
         internal EditorChange(EditorChangeKind kind, EditorObjectId id, EditorSceneId scene, EditorSceneId previousScene = default,
             EditorObjectId previousParent = default, EditorObjectId newParent = default)
         {
@@ -80,6 +87,7 @@ namespace EditorEventHandlers.Editor
         /// <inheritdoc />
         public override bool Equals(object obj) => obj is EditorChange other && Equals(other);
         /// <summary>一時的なコレクションに使う、変更の種類と全識別子のハッシュ値です。</summary>
+        /// <returns>現在の値に対応するハッシュ値です。永続的な識別には使いません。</returns>
         public override int GetHashCode()
         {
             unchecked
@@ -93,7 +101,7 @@ namespace EditorEventHandlers.Editor
         }
     }
 
-    // Condition provider: read-only detection. One definition per notification type.
+    // 条件は読み取り専用で判定します。通知型ごとに1つだけ定義します。
     /// <summary>指定した通知型に対する、同期的で読み取り専用の条件を定義します。</summary>
     /// <typeparam name="TEvent">購読者と共有する通知の型です。</typeparam>
     /// <remarks>評価中は Unity オブジェクトの編集、非同期処理、Editor のイベントループへの再入を行わないでください。</remarks>
@@ -104,8 +112,8 @@ namespace EditorEventHandlers.Editor
         /// <summary>評価対象の変更フラグです。None や未対応のフラグは登録時に拒否します。</summary>
         EditorChangeKind Changes { get; }
         /// <summary>Editor のメインスレッドで、対象を編集せずに変更を評価します。</summary>
-        /// <param name="context">この呼び出しの入力と、個別の期限です。</param>
-        /// <param name="match">戻り値が true のときの通知と、編集可能な階層のルートです。</param>
+        /// <param name="context">入力変更と、この条件評価の期限を確認するコンテキストです。</param>
+        /// <param name="match">一致した場合の通知と編集範囲のルートです。不一致の場合は使いません。</param>
         /// <returns>一致した場合は true です。false の場合、出力値は使いません。</returns>
         bool TryMatch(ConditionContext context, out ConditionMatch<TEvent> match);
     }
@@ -129,8 +137,11 @@ namespace EditorEventHandlers.Editor
     /// <remarks>評価中の Editor メインスレッドでだけ使ってください。後の処理のために保持しないでください。</remarks>
     public sealed class ConditionContext
     {
+        /// <summary>期限超過の例外に含める条件登録の識別子です。</summary>
         private readonly string _id;
+        /// <summary>期限の経過時間を測るための開始タイムスタンプです。</summary>
         private readonly long _start = Stopwatch.GetTimestamp();
+        /// <summary>評価中でコンテキストを使用できる場合は true です。</summary>
         private bool _open = true;
         /// <summary>評価対象の入力変更です。</summary>
         public EditorChange Change { get; }
@@ -141,6 +152,10 @@ namespace EditorEventHandlers.Editor
         /// <summary>このコンテキストの作成からの経過時間です。</summary>
         public TimeSpan Elapsed => TimeSpan.FromTicks((long)((Stopwatch.GetTimestamp() - _start)
             * (TimeSpan.TicksPerSecond / (double)Stopwatch.Frequency)));
+        /// <summary>条件評価の入力、バッチ番号、識別子、開始時の期限を保持します。</summary>
+        /// <param name="change">通知時点の種類と識別子を保持する入力変更です。</param>
+        /// <param name="id">設定と異常記録の区別に使う安定した登録識別子です。</param>
+        /// <param name="limit">呼び出し開始時または登録時に保存する個別の期限です。</param>
         internal ConditionContext(EditorChange change, string id, TimeSpan limit)
         { Change = change; BatchId = EventDispatcher.BatchId; _id = id; TimeLimit = limit; }
         /// <summary>Editor のスレッド、呼び出しの有効期間、協調的な期限を確認します。</summary>
@@ -152,10 +167,11 @@ namespace EditorEventHandlers.Editor
             if (!_open) throw new InvalidOperationException("This condition context has already ended.");
             if (Elapsed >= TimeLimit) throw new ConditionDeadlineExceededException(_id, TimeLimit);
         }
+        /// <summary>条件評価の終了を記録し、以後の期限確認を拒否する状態にします。</summary>
         internal void Close() => _open = false;
     }
 
-    // Event handler: synchronous execution, with explicit completion and scoped edits.
+    // ハンドラーは同期的に実行し、終了状態を明示して範囲内だけを編集します。
     /// <summary>同期的にハンドラーを実行し、終了結果を明示して返します。</summary>
     /// <typeparam name="TEvent">条件から渡される通知の型です。</typeparam>
     /// <remarks>コンテキストの編集メソッドを使ってください。Unity の遅延編集の予約や、Editor のイベントループへの再入は行わないでください。</remarks>
@@ -164,7 +180,7 @@ namespace EditorEventHandlers.Editor
         /// <summary>空白でない安定した識別子です。同じ通知型の購読内で一意にしてください。</summary>
         string Id { get; }
         /// <summary>Editor のメインスレッドで、個別の期限内に通知を処理します。</summary>
-        /// <param name="context">通知、編集範囲を限定した編集メソッド、呼び出しの期限です。</param>
+        /// <param name="context">このハンドラー呼び出しの編集範囲と期限を確認するコンテキストです。</param>
         /// <returns>成功・スキップ・失敗・キャンセルのいずれかを明示した結果です。</returns>
         HandlerResult Execute(HandlerContext<TEvent> context);
     }
@@ -190,6 +206,9 @@ namespace EditorEventHandlers.Editor
         public HandlerStatus Status { get; }
         /// <summary>省略可能な説明です。生成メソッドは null を空文字列に変換します。</summary>
         public string Message { get; }
+        /// <summary>終了状態を保存し、説明が null の場合は空文字列に変換します。</summary>
+        /// <param name="status">明示的な終了状態です。</param>
+        /// <param name="message">終了結果の説明です。null は空文字列に変換します。</param>
         private HandlerResult(HandlerStatus status, string message)
         { Status = status; Message = message ?? string.Empty; }
         /// <summary>正常終了を報告します。実行後の確認をすべて通過した場合に、記録した変更を確定します。</summary>
@@ -212,12 +231,18 @@ namespace EditorEventHandlers.Editor
     /// <summary>ハンドラーの協調的な期限を超過したことを示します。同期的な Unity コードを強制中断するものではありません。</summary>
     public sealed class HandlerDeadlineExceededException : TimeoutException
     {
+        /// <summary>期限を超過したハンドラーの識別子と設定時間を例外メッセージに含めます。</summary>
+        /// <param name="id">設定と異常記録の区別に使う安定した登録識別子です。</param>
+        /// <param name="limit">呼び出し開始時または登録時に保存する個別の期限です。</param>
         internal HandlerDeadlineExceededException(string id, TimeSpan limit)
             : base("Handler '" + id + "' exceeded its " + limit.TotalMilliseconds + " ms deadline.") { }
     }
     /// <summary>条件の協調的な期限を超過したことを示します。同期的な Unity コードを強制中断するものではありません。</summary>
     public sealed class ConditionDeadlineExceededException : TimeoutException
     {
+        /// <summary>期限を超過した条件の識別子と設定時間を例外メッセージに含めます。</summary>
+        /// <param name="id">設定と異常記録の区別に使う安定した登録識別子です。</param>
+        /// <param name="limit">呼び出し開始時または登録時に保存する個別の期限です。</param>
         internal ConditionDeadlineExceededException(string id, TimeSpan limit)
             : base("Condition '" + id + "' exceeded its " + limit.TotalMilliseconds + " ms deadline.") { }
     }
@@ -236,6 +261,7 @@ namespace EditorEventHandlers.Editor
     /// <summary>読み取り専用の購読状態と、明示的な解除トークンです。解除するまで登録への強参照が維持されます。</summary>
     public sealed class EventSubscription : IDisposable
     {
+        /// <summary>型付きハンドラーへの呼び出しを仲介する内部エントリーです。</summary>
         internal readonly IHandlerEntry Entry;
         /// <summary>登録時に保存した識別子です。</summary>
         public string Id { get; }
@@ -245,6 +271,7 @@ namespace EditorEventHandlers.Editor
         public SubscriptionMode Mode { get; }
         /// <summary>指定順に並んだ、変更できない条件の通知型一覧です。</summary>
         public IReadOnlyList<Type> ConditionTypes { get; }
+        /// <summary>この購読に設定された、呼び出し時に取得する期限です。</summary>
         internal TimeSpan ExecutionLimit;
         /// <summary>ユーザーが設定した現在の期限です。各呼び出しは開始時の値を保持します。</summary>
         public TimeSpan TimeLimit => ExecutionLimit;
@@ -260,6 +287,13 @@ namespace EditorEventHandlers.Editor
         public HandlerResult LastResult { get; internal set; }
         /// <summary>直近の呼び出し時間です。変更の確定・復元にかかった時間は含みません。初回使用前はゼロです。</summary>
         public TimeSpan LastDuration { get; internal set; }
+        /// <summary>購読の実装、通知型、識別子、期限、組み合わせ方、必要な型一覧を保持します。</summary>
+        /// <param name="entry">登録された実装を保持する内部エントリーです。</param>
+        /// <param name="eventType">完全一致で扱う通知型です。</param>
+        /// <param name="id">設定と異常記録の区別に使う安定した登録識別子です。</param>
+        /// <param name="limit">呼び出し開始時または登録時に保存する個別の期限です。</param>
+        /// <param name="mode">単一・全条件一致・いずれか一致の購読モードです。</param>
+        /// <param name="conditionTypes">購読が必要とする通知型の一覧です。</param>
         internal EventSubscription(IHandlerEntry entry, Type eventType, string id, TimeSpan limit,
             SubscriptionMode mode, Type[] conditionTypes)
         {
@@ -274,6 +308,7 @@ namespace EditorEventHandlers.Editor
     /// <summary>読み取り専用の条件登録状態と、明示的な解除トークンです。条件を解除すると、その購読は待機状態になります。</summary>
     public sealed class ConditionRegistration : IDisposable
     {
+        /// <summary>型付き条件への呼び出しを仲介する内部エントリーです。</summary>
         internal readonly IConditionEntry Entry;
         /// <summary>登録時に保存した識別子です。</summary>
         public string Id { get; }
@@ -281,6 +316,7 @@ namespace EditorEventHandlers.Editor
         public Type EventType { get; }
         /// <summary>登録時に保存した変更の種類です。</summary>
         public EditorChangeKind Changes { get; }
+        /// <summary>この条件に設定された、評価時に取得する期限です。</summary>
         internal TimeSpan ExecutionLimit;
         /// <summary>ユーザーが設定した現在の期限です。各呼び出しは開始時の値を保持します。</summary>
         public TimeSpan TimeLimit => ExecutionLimit;
@@ -292,6 +328,12 @@ namespace EditorEventHandlers.Editor
         public string DisabledReason { get; internal set; }
         /// <summary>直近の評価時間です。初回評価前はゼロです。</summary>
         public TimeSpan LastDuration { get; internal set; }
+        /// <summary>条件の実装、通知型、識別子、変更フラグ、期限を保持します。</summary>
+        /// <param name="entry">登録された実装を保持する内部エントリーです。</param>
+        /// <param name="eventType">完全一致で扱う通知型です。</param>
+        /// <param name="id">設定と異常記録の区別に使う安定した登録識別子です。</param>
+        /// <param name="changes">評価対象とする公開入力の変更フラグです。</param>
+        /// <param name="limit">呼び出し開始時または登録時に保存する個別の期限です。</param>
         internal ConditionRegistration(IConditionEntry entry, Type eventType, string id, EditorChangeKind changes, TimeSpan limit)
         { Entry = entry; EventType = eventType; Id = id; Changes = changes; ExecutionLimit = limit; }
         /// <summary>この条件を解除して登録枠を解放します。購読者は解除しません。繰り返し呼び出しても何もしません。</summary>
@@ -299,13 +341,13 @@ namespace EditorEventHandlers.Editor
         public void Dispose() => EventDispatcher.Unregister(this);
     }
 
-    // The entire public dispatcher facade: registration only; no public publish or dispatch method.
+    // 公開の入口は登録だけです。任意の通知を送信・配送する公開メソッドはありません。
     /// <summary>メインスレッドで使う登録 API の入口です。任意の通知の投入や実行ポリシーの変更を行う公開 API はありません。</summary>
     public static class EditorEvents
     {
         /// <summary>条件登録と購読の合計上限内で、指定した通知型に条件を1件登録します。</summary>
         /// <typeparam name="TEvent">通知の型です。型は完全一致で扱います。</typeparam>
-        /// <param name="condition">読み取り専用の条件です。登録時に使うゲッターは軽量な処理にしてください。</param>
+        /// <param name="condition">登録する型付き条件の実装です。</param>
         /// <returns>登録を解除するトークンと、読み取り専用の条件登録状態です。</returns>
         /// <exception cref="ArgumentNullException">condition が null の場合です。</exception>
         /// <exception cref="ArgumentException">識別子や変更フラグが無効、またはこの通知型にすでに条件が登録されている場合です。</exception>
@@ -315,7 +357,7 @@ namespace EditorEventHandlers.Editor
             => EventDispatcher.Register(condition);
         /// <summary>同期的なハンドラーを購読登録します。同じ通知型の有効な条件がない間は待機します。</summary>
         /// <typeparam name="TEvent">通知の型です。型は完全一致で扱います。</typeparam>
-        /// <param name="handler">識別子のゲッターが軽量なハンドラーです。</param>
+        /// <param name="handler">登録する型付きハンドラーの実装です。</param>
         /// <returns>購読を解除するトークンと、読み取り専用の購読状態です。</returns>
         /// <exception cref="ArgumentNullException">ハンドラーが null の場合です。</exception>
         /// <exception cref="ArgumentException">識別子が空白、または同じ通知型ですでに購読登録されている場合です。</exception>
@@ -325,7 +367,7 @@ namespace EditorEventHandlers.Editor
             => EventDispatcher.Subscribe(handler);
 
         /// <summary>指定した全条件が同じ入力変更に一致し、同じ編集範囲のルートを返す場合に処理する購読を登録します。</summary>
-        /// <param name="handler">安定した識別子を持つ、同期的な複合通知ハンドラーです。</param>
+        /// <param name="handler">登録する型付きハンドラーの実装です。</param>
         /// <param name="eventTypes">型引数が確定した、重複のない通知型を指定順に1〜100件渡します。登録時にコピーします。</param>
         /// <returns>購読を解除するトークンと、読み取り専用の購読状態です。</returns>
         /// <exception cref="ArgumentNullException">ハンドラーまたは型の配列が null の場合です。</exception>
@@ -336,7 +378,7 @@ namespace EditorEventHandlers.Editor
             => EventDispatcher.SubscribeComposite(handler, eventTypes, SubscriptionMode.All);
 
         /// <summary>指定したいずれかの条件が同じ入力変更に一致した場合に処理する購読を登録します。</summary>
-        /// <param name="handler">安定した識別子を持つ、同期的な複合通知ハンドラーです。</param>
+        /// <param name="handler">登録する型付きハンドラーの実装です。</param>
         /// <param name="eventTypes">型引数が確定した、重複のない通知型を指定順に1〜100件渡します。登録時にコピーします。</param>
         /// <returns>購読を解除するトークンと、読み取り専用の購読状態です。</returns>
         /// <exception cref="ArgumentNullException">ハンドラーまたは型の配列が null の場合です。</exception>

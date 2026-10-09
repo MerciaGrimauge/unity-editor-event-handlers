@@ -7,22 +7,36 @@ using Object = UnityEngine.Object;
 
 namespace EditorEventHandlers.Editor
 {
-    // Unity-specific undo and prefab state. Access is limited to the scoped handler context.
+    // Unity の Undo と Prefab 状態を扱います。アクセスは範囲を限定したハンドラーコンテキストに限ります。
+    /// <summary>1回のハンドラー呼び出しについて、編集範囲の確認と Undo・Prefab の確定・復元を担当します。</summary>
     internal sealed class UnityEditTransaction
     {
+        /// <summary>Undo グループの名前に含めるハンドラー識別子です。</summary>
         private readonly string _handlerId;
+        /// <summary>編集範囲と期限の確認を提供する、この呼び出しのコンテキストです。</summary>
         private readonly HandlerContext _context;
+        /// <summary>編集前の状態を Undo に記録済みのオブジェクト識別子です。</summary>
         private readonly HashSet<EditorObjectId> _recorded = new HashSet<EditorObjectId>();
+        /// <summary>復元時に適用する、編集前の Prefab の変更記録です。</summary>
         private readonly Dictionary<EditorObjectId, PrefabState> _prefabStates = new Dictionary<EditorObjectId, PrefabState>();
+        /// <summary>このトランザクションで作成したオブジェクトの識別子です。</summary>
         private readonly HashSet<EditorObjectId> _created = new HashSet<EditorObjectId>();
+        /// <summary>この編集をまとめる Undo グループ番号です。開始前は -1 です。</summary>
         private int _group = -1;
+        /// <summary>この編集記録が扱うシーン階層のルートです。</summary>
         private GameObject Root { get; }
+        /// <summary>Undo グループが開始され、追跡対象の編集があるかどうかです。</summary>
         internal bool HasChanges => _group >= 0;
 
+        /// <summary>編集前の Prefab の変更記録と、復元時に参照を解決するための識別子を保持します。</summary>
         private readonly struct PrefabState
         {
+            /// <summary>編集前に保存した Prefab インスタンスの変更記録です。</summary>
             internal readonly PropertyModification[] Properties;
+            /// <summary>保存した変更記録内のオブジェクト参照に対応する識別子です。</summary>
             internal readonly EditorObjectId[] ReferenceIds;
+            /// <summary>Prefab の変更記録を保持し、各オブジェクト参照の一時的な識別子を保存します。</summary>
+            /// <param name="properties">編集前の Prefab の変更記録です。null は空の一覧として扱います。</param>
             internal PrefabState(PropertyModification[] properties)
             {
                 Properties = properties ?? Array.Empty<PropertyModification>();
@@ -32,10 +46,17 @@ namespace EditorEventHandlers.Editor
             }
         }
 
+        /// <summary>編集範囲のルート、ハンドラー識別子、期限を確認するコンテキストを保持します。</summary>
+        /// <param name="root">現在の編集範囲のルートです。Unity オブジェクトの存続は使用時に確認します。</param>
+        /// <param name="handlerId">Undo グループの名前に使うハンドラー識別子です。</param>
+        /// <param name="context">このハンドラー呼び出しの編集範囲と期限を確認するコンテキストです。</param>
         internal UnityEditTransaction(GameObject root, string handlerId, HandlerContext context)
         { Root = root; _handlerId = handlerId; _context = context; }
 
-        // Returns the GameObject that owns the target; only GameObjects and Components pass.
+        // 対象が属する GameObject を返します。GameObject と Component だけを許可します。
+        /// <summary>期限とルートの存続を確認し、対象が同じシーンの編集範囲内の GameObject または Component であることを要求します。</summary>
+        /// <param name="target">同じシーンの編集範囲内にあることを確認する GameObject または Component です。</param>
+        /// <returns>確認済み対象が属する GameObject です。</returns>
         private GameObject RequireTarget(Object target)
         {
             _context.CheckDeadline();
@@ -48,6 +69,8 @@ namespace EditorEventHandlers.Editor
             return obj;
         }
 
+        /// <summary>既存の Prefab インスタンスの変更記録を1回だけ保存します。今回作成した階層は保存対象から除外します。</summary>
+        /// <param name="target">編集前の Prefab インスタンスの状態を保存する対象です。</param>
         private void CapturePrefabState(GameObject target)
         {
             var instanceRoot = PrefabUtility.GetNearestPrefabInstanceRoot(target);
@@ -59,6 +82,8 @@ namespace EditorEventHandlers.Editor
             _prefabStates.Add(id, new PrefabState(PrefabUtility.GetPropertyModifications(instanceRoot)));
         }
 
+        /// <summary>最初の編集で Undo グループを開始し、必要な Prefab の編集前の状態を保存します。</summary>
+        /// <param name="target">追加で Prefab の状態を保存する対象です。null なら Root のみを保存します。</param>
         private void BeginChanges(GameObject target = null)
         {
             if (_group < 0)
@@ -71,6 +96,10 @@ namespace EditorEventHandlers.Editor
             if (target != null) CapturePrefabState(target);
         }
 
+        /// <summary>対象と型を確認して Component を Undo 対応で追加し、編集後の期限を確認します。</summary>
+        /// <param name="target">Component を追加する、編集範囲内の GameObject です。</param>
+        /// <param name="componentType">追加する Component の派生型です。</param>
+        /// <returns>追加された Component です。</returns>
         internal Component AddComponent(GameObject target, Type componentType)
         {
             RequireTarget(target);
@@ -83,8 +112,11 @@ namespace EditorEventHandlers.Editor
             return added;
         }
 
-        // Captures each existing object once, before its first property edit.
-        // Creation, destruction and parenting must use the other context methods.
+        // 各既存オブジェクトを、最初のプロパティ編集前に1回だけ記録します。
+        // 作成・破棄・親変更には別の専用コンテキストメソッドを使います。
+        /// <summary>対象を初回の編集前に記録し、同期編集後に Prefab の変更記録と期限を確認します。</summary>
+        /// <param name="target">プロパティを編集する、編集範囲内の GameObject または Component です。</param>
+        /// <param name="edit">指定対象のプロパティだけを同期的に編集する処理です。</param>
         internal void Modify(Object target, Action edit)
         {
             var owner = RequireTarget(target);
@@ -96,6 +128,10 @@ namespace EditorEventHandlers.Editor
             _context.CheckDeadline();
         }
 
+        /// <summary>編集範囲内に子の GameObject を作成し、作成と親子関係を Undo に記録します。</summary>
+        /// <param name="name">作成する GameObject の名前です。</param>
+        /// <param name="parent">作成先となる同じ編集範囲内の親です。null なら Root を使います。</param>
+        /// <returns>作成した子の GameObject です。</returns>
         internal GameObject CreateChild(string name, GameObject parent = null)
         {
             parent = parent != null ? parent : Root;
@@ -110,6 +146,10 @@ namespace EditorEventHandlers.Editor
             return child;
         }
 
+        /// <summary>Prefab アセットを編集範囲のシーンに作成し、作成と親子関係を Undo に記録します。</summary>
+        /// <param name="prefab">インスタンス化する Prefab アセットです。</param>
+        /// <param name="parent">作成先となる同じ編集範囲内の親です。null なら Root を使います。</param>
+        /// <returns>作成した Prefab インスタンスです。</returns>
         internal GameObject InstantiatePrefab(GameObject prefab, GameObject parent = null)
         {
             parent = parent != null ? parent : Root;
@@ -125,6 +165,9 @@ namespace EditorEventHandlers.Editor
             return child;
         }
 
+        /// <summary>ルート移動や循環を拒否し、編集範囲内の子孫の親変更を Undo に記録します。</summary>
+        /// <param name="child">親を変更する子孫です。Root 自体は指定できません。</param>
+        /// <param name="parent">同じ編集範囲内の移動先の親です。</param>
         internal void SetParent(GameObject child, GameObject parent)
         {
             RequireTarget(child);
@@ -138,6 +181,8 @@ namespace EditorEventHandlers.Editor
             _context.CheckDeadline();
         }
 
+        /// <summary>ルートと Transform の破棄を拒否し、編集範囲内の対象を Undo 対応で破棄します。</summary>
+        /// <param name="target">破棄する、Root を除く編集範囲内の GameObject または Component です。</param>
         internal void Destroy(Object target)
         {
             var owner = RequireTarget(target);
@@ -148,10 +193,12 @@ namespace EditorEventHandlers.Editor
             _context.CheckDeadline();
         }
 
+        /// <summary>記録した変更を確定または復元します。復元時は Prefab の変更記録とオブジェクト参照も復元します。</summary>
+        /// <param name="commit">true なら記録した変更を確定し、false なら復元します。</param>
         internal void Finish(bool commit)
         {
             if (_group < 0) return;
-            // No async/yield or unrelated editor work is allowed while this transaction is open.
+            // この編集記録が有効な間は非同期処理・yield・無関係な Editor 処理を挟みません。
             Undo.FlushUndoRecordObjects();
             try
             {

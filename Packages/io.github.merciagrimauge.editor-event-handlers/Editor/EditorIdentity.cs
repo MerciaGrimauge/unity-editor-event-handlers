@@ -16,7 +16,10 @@ namespace EditorEventHandlers.Editor
     /// <remarks>破棄後に識別子が再利用される場合があります。Unity のセッションやドメインをまたいで保持しないでください。比較時はオブジェクトへの参照を取得しません。</remarks>
     public readonly struct EditorObjectId : IEquatable<EditorObjectId>
     {
+        /// <summary>現在の Unity API が提供する一時的なオブジェクト識別子です。</summary>
         private readonly NativeObjectId _value;
+        /// <summary>現在の Unity API が使う一時的なオブジェクト識別子を保持します。</summary>
+        /// <param name="value">現在の Unity API が使用する一時的な識別子です。</param>
         internal EditorObjectId(NativeObjectId value) { _value = value; }
 
         /// <summary>識別子が既定値以外かどうかです。オブジェクトはすでに破棄されている場合があります。</summary>
@@ -58,10 +61,17 @@ namespace EditorEventHandlers.Editor
         /// <inheritdoc />
         public override bool Equals(object obj) => obj is EditorObjectId other && Equals(other);
         /// <summary>一時的なコレクションに使うハッシュ値です。一意または永続的なオブジェクト識別子ではありません。</summary>
+        /// <returns>現在の値に対応するハッシュ値です。永続的な識別には使いません。</returns>
         public override int GetHashCode() => _value.GetHashCode();
         /// <summary>オブジェクトへの参照を取得せず、識別子が等しいか比較します。</summary>
+        /// <param name="left">比較する左側の識別子です。</param>
+        /// <param name="right">比較する右側の識別子です。</param>
+        /// <returns>識別子が等しい場合は true、それ以外は false です。</returns>
         public static bool operator ==(EditorObjectId left, EditorObjectId right) => left.Equals(right);
         /// <summary>オブジェクトへの参照を取得せず、識別子が異なるか比較します。</summary>
+        /// <param name="left">比較する左側の識別子です。</param>
+        /// <param name="right">比較する右側の識別子です。</param>
+        /// <returns>識別子が異なる場合は true、それ以外は false です。</returns>
         public static bool operator !=(EditorObjectId left, EditorObjectId right) => !left.Equals(right);
     }
 
@@ -69,7 +79,10 @@ namespace EditorEventHandlers.Editor
     /// <remarks>Unity のセッションやドメインをまたいで保存しないでください。比較時はシーンの存在や読み込み状態を確認しません。</remarks>
     public readonly struct EditorSceneId : IEquatable<EditorSceneId>
     {
+        /// <summary>現在の Unity API が提供する一時的なシーン識別子です。</summary>
         private readonly NativeSceneId _value;
+        /// <summary>現在の Unity API が使う一時的なシーン識別子を保持します。</summary>
+        /// <param name="value">現在の Unity API が使用する一時的な識別子です。</param>
         internal EditorSceneId(NativeSceneId value) { _value = value; }
         /// <summary>識別子が既定値以外かどうかです。シーンがすでに存在しない、または読み込み済みではない場合があります。</summary>
         public bool IsValid => !_value.Equals(default(NativeSceneId));
@@ -89,10 +102,17 @@ namespace EditorEventHandlers.Editor
         /// <inheritdoc />
         public override bool Equals(object obj) => obj is EditorSceneId other && Equals(other);
         /// <summary>一時的なコレクションに使うハッシュ値です。一意または永続的なシーン識別子ではありません。</summary>
+        /// <returns>現在の値に対応するハッシュ値です。永続的な識別には使いません。</returns>
         public override int GetHashCode() => _value.GetHashCode();
         /// <summary>シーンの存在や読み込み状態を確認せず、識別子が等しいか比較します。</summary>
+        /// <param name="left">比較する左側の識別子です。</param>
+        /// <param name="right">比較する右側の識別子です。</param>
+        /// <returns>識別子が等しい場合は true、それ以外は false です。</returns>
         public static bool operator ==(EditorSceneId left, EditorSceneId right) => left.Equals(right);
         /// <summary>シーンの存在や読み込み状態を確認せず、識別子が異なるか比較します。</summary>
+        /// <param name="left">比較する左側の識別子です。</param>
+        /// <param name="right">比較する右側の識別子です。</param>
+        /// <returns>識別子が異なる場合は true、それ以外は false です。</returns>
         public static bool operator !=(EditorSceneId left, EditorSceneId right) => !left.Equals(right);
     }
 }

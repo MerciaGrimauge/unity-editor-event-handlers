@@ -7,12 +7,17 @@ namespace EditorEventHandlers.Editor
     /// <remarks>コレクションは変更できません。含まれる通知オブジェクトは元の参照を保持します。Any は最初に一致した結果だけを公開します。</remarks>
     public sealed class CompositeEvent
     {
+        /// <summary>完全一致する通知型をキーとした、複合購読の一致結果です。</summary>
         private readonly Dictionary<Type, object> _results;
         /// <summary>この組み合わせで評価した全条件が共有する入力変更です。</summary>
         public EditorChange Change { get; }
         /// <summary>購読時の指定順に並んだ、変更できない必須通知型の一覧です。</summary>
         public IReadOnlyList<Type> RequiredTypes { get; }
 
+        /// <summary>入力変更、必要な型一覧、選択済みの通知結果を保持します。</summary>
+        /// <param name="change">通知時点の種類と識別子を保持する入力変更です。</param>
+        /// <param name="requiredTypes">購読時の指定順に並んだ必須通知型の一覧です。</param>
+        /// <param name="results">同じ入力変更に対する、評価済みまたは選択済みの条件結果です。</param>
         internal CompositeEvent(EditorChange change, IReadOnlyList<Type> requiredTypes, Dictionary<Type, object> results)
         { Change = change; RequiredTypes = requiredTypes; _results = results; }
 

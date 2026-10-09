@@ -2,8 +2,6 @@
 
 アバターPrefabが配置されたとき、子オブジェクトを1つ追加するイベントハンドラーを作ります。標準条件の判定コードを書く必要はありません。
 
-Unity オブジェクトの参照は、破棄済みの場合も含めて `== null` / `!= null` で確認します。`is null` との違いは[Unityオブジェクトのnull判定](CONTRACTS.md#unity-object-null)を参照してください。
-
 ## アセンブリを用意する
 
 共通パッケージとAvatar Placement、対応するVRChat SDKを導入します。Editor専用のasmdefに次の参照を設定します。パッケージの取得・導入は利用者側で行います。

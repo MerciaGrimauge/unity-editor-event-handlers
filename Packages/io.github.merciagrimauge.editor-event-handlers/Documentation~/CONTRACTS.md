@@ -22,20 +22,6 @@
 
 通知値は購読者間で共有されます。読み取り専用の型・一覧を使っても、含まれるUnity参照の状態は後で変わり得ます。入力の種類・識別子・親遷移は保存しますが、オブジェクト全体の状態を凍結しません。`BatchId`とUnity識別子は一時的な値で、永続保存に使用しません。
 
-<a id="unity-object-null"></a>
-
-## Unityオブジェクトのnull判定
-
-`GameObject`、`Component`、`Transform`、`Mesh` などの `UnityEngine.Object` 派生型は、`== null` / `!= null` で存続を確認します。Unity が比較演算子を定義しているため、C# の参照が null の場合に加え、参照先の Unity オブジェクトが破棄済みの場合も `== null` は true になります。
-
-例えば `context.Event.Avatar == null` は、アバターへの参照が未設定、またはアバターがすでに破棄されている場合に処理を止めるための確認です。先に別のハンドラーが処理した後は状態が変わる場合があるため、使用する直前に確認してください。
-
-`is null` / `is not null` は比較演算子を呼び出さず、C# の参照だけを確認します。`ReferenceEquals`、null 条件演算子 `?.`、null 合体演算子 `??` も、Unity オブジェクトの破棄を検出するための代替にはなりません。破棄済みオブジェクトへの参照は C# 上では null でない場合があるため、これらへ置き換えると存続確認を通過してしまいます。
-
-この区別は `UnityEngine.Object` 派生型に対するものです。通常の C# クラスや文字列の null 判定には、型や目的に応じて `is null` などを使えます。通知型が通常の C# 型であっても、そのプロパティが `GameObject` なら Unity の比較が必要です。
-
-詳細は [Unity の比較演算子の仕様](https://docs.unity.com/en-us/engine/6000.6/script-reference/unityengine/object/op-equality)を参照してください。
-
 ## ANDとOR
 
 | 購読 | 同じ入力変更での動作 | ハンドラーへ渡す結果 |
